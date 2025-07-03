@@ -8,6 +8,7 @@ import tempfile
 import scipy.io.wavfile as wav
 import sys
 import msvcrt
+from openai import OpenAI
 
 listening = False
 running = True
@@ -43,7 +44,7 @@ def input_handler():
                 else:
                     # Stop recording
                     listening = False
-                    print("\nRecording stopped, processing audio...\n")
+                    print("Recording stopped, processing audio...")
                     
             elif key == ' ':  # Space key
                 print("\nExiting...")
@@ -90,11 +91,24 @@ with sd.InputStream(callback=callback, channels=1, samplerate=samplerate):
                 with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmpfile:
                     wav.write(tmpfile.name, samplerate, (audio_np * 32767).astype(np.int16))
                     result = model.transcribe(tmpfile.name)
-                
+
+                user_transcription = result['text'].strip()
                 print('------------------------------------------------')
-                print(f"\nTranscription: {result['text']}\n")
-                print('------------------------------------------------')
+                print(f"\nUser: {user_transcription}\n")
                 
+                # Feed into AI and get response
+                client = OpenAI(api_key='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')
+
+                response = client.responses.create(
+                    model = 'gpt-4.1-mini',
+                    instructions = 'You are a black soldier fly in a compost bin in Singapore. Answer the question as if you were the fly,' \
+                    ' and make the answer informative and engaging, yet concise (Try to keep it under 50 words)',
+                    input = user_transcription
+                )
+
+                print("Black Soldier Fly:", response.output_text + '\n')
+                print('------------------------------------------------')
+
                 if running:
                     print("\nPress ENTER to record again, or SPACE to quit.")
         else:
