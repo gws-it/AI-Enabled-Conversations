@@ -97,16 +97,16 @@ with sd.InputStream(callback=callback, channels=1, samplerate=samplerate):
                 print(f"\nUser: {user_transcription}\n")
                 
                 # Feed into AI and get response
-                client = OpenAI(api_key='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')
+                # client = OpenAI(api_key='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')
 
-                response = client.responses.create(
-                    model = 'gpt-4.1-mini',
-                    instructions = 'You are a black soldier fly in a compost bin in Singapore. Answer the question as if you were the fly,' \
-                    ' and make the answer informative and engaging, yet concise (Try to keep it under 50 words)',
-                    input = user_transcription
-                )
+                # response = client.responses.create(
+                #     model = 'gpt-4.1-mini',
+                #     instructions = 'You are a black soldier fly in a compost bin in Singapore. Answer the question as if you were the fly,' \
+                #     ' and make the answer informative and engaging, yet concise (Try to keep it under 50 words)',
+                #     input = user_transcription
+                # )
 
-                print("Black Soldier Fly:", response.output_text + '\n')
+                # print("Black Soldier Fly:", response.output_text + '\n')
                 print('------------------------------------------------')
 
                 if running:
