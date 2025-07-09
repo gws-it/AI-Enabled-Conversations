@@ -132,6 +132,26 @@
             min-height: 20px;
             margin-left: 10px;
         }
+
+        .connection-status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            text-align: center;
+            font-family: 'Jost', sans-serif;
+        }
+
+        .connection-status.connected {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .connection-status.disconnected {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
     </style>
 </head>
 <body>
@@ -145,6 +165,9 @@
             ecological systems and explain their roles in sustainability using 
             AI-powered conversational agents.
         </p>
+        <div id="connection-status" class="connection-status disconnected">
+            Connecting to local services...
+        </div>
     </div>
 
     <div class="chat-container">
@@ -168,16 +191,50 @@
         const log = document.getElementById("chat-log");
         const micButton = document.getElementById("mic-button");
         const statusMessage = document.getElementById("status-message");
+        const connectionStatus = document.getElementById("connection-status");
         
         let mediaRecorder;
         let audioChunks = [];
         let isRecording = false;
+        let servicesConnected = false;
         
-        const OPENAI_API_KEY = 'xxx';
+        // Configuration for local services
+        const WHISPER_SERVER_URL = 'http://localhost:5000';
+        const OLLAMA_SERVER_URL = 'http://localhost:11434';
+
+        // Check if services are available
+        async function checkServices() {
+            try {
+                const whisperCheck = await fetch(`${WHISPER_SERVER_URL}/health`, { 
+                    method: 'GET',
+                    signal: AbortSignal.timeout(3000)
+                });
+                const ollamaCheck = await fetch(`${OLLAMA_SERVER_URL}/api/version`, { 
+                    method: 'GET',
+                    signal: AbortSignal.timeout(3000)
+                });
+                
+                if (whisperCheck.ok && ollamaCheck.ok) {
+                    servicesConnected = true;
+                    connectionStatus.textContent = "✓ Connected to local AI services";
+                    connectionStatus.className = "connection-status connected";
+                    input.disabled = false;
+                    micButton.disabled = false;
+                } else {
+                    throw new Error("Services not responding");
+                }
+            } catch (error) {
+                servicesConnected = false;
+                connectionStatus.textContent = "✗ Local AI services not available - check Whisper server and Ollama";
+                connectionStatus.className = "connection-status disconnected";
+                input.disabled = true;
+                micButton.disabled = true;
+            }
+        }
 
         // Handle text input
         input.addEventListener("keypress", async function (e) {
-            if (e.key === "Enter" && input.value.trim() !== "") {
+            if (e.key === "Enter" && input.value.trim() !== "" && servicesConnected) {
                 const question = input.value.trim();
                 input.value = "";
                 await sendMessage(question);
@@ -186,6 +243,11 @@
 
         // Handle microphone button
         micButton.addEventListener("click", async function() {
+            if (!servicesConnected) {
+                statusMessage.textContent = "Local AI services not available";
+                return;
+            }
+            
             if (!isRecording) {
                 await startRecording();
             } else {
@@ -211,7 +273,7 @@
                 mediaRecorder.start();
                 isRecording = true;
                 micButton.classList.add("recording");
-                micButton.textContent = "";
+                micButton.textContent = "🔴";
                 statusMessage.textContent = "Recording... Click again to stop";
                 
             } catch (error) {
@@ -237,13 +299,9 @@
             try {
                 const formData = new FormData();
                 formData.append('file', audioBlob, 'audio.wav');
-                formData.append('model', 'whisper-1');
                 
-                const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+                const response = await fetch(`${WHISPER_SERVER_URL}/transcribe`, {
                     method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${OPENAI_API_KEY}`
-                    },
                     body: formData
                 });
                 
@@ -252,7 +310,7 @@
                 }
                 
                 const result = await response.json();
-                const transcription = result.text.trim();
+                const transcription = result.text ? result.text.trim() : '';
                 
                 if (transcription) {
                     await sendMessage(transcription);
@@ -279,27 +337,27 @@
             // Create a placeholder message for the streaming response
             const responseDiv = document.createElement("div");
             responseDiv.innerHTML = `<strong>Black Soldier Fly:</strong> <span class="response-content"></span>`;
+            responseDiv.classList.add("ai-message");
             log.appendChild(responseDiv);
             log.scrollTop = log.scrollHeight;
             
             const responseContent = responseDiv.querySelector('.response-content');
 
             try {
-                const res = await fetch("https://api.openai.com/v1/chat/completions", {
+                const res = await fetch(`${OLLAMA_SERVER_URL}/api/chat`, {
                     method: "POST",
                     headers: {
-                        "Content-Type": "application/json",
-                        "Authorization": `Bearer ${OPENAI_API_KEY}`
+                        "Content-Type": "application/json"
                     },
                     body: JSON.stringify({
-                        model: "gpt-4",
+                        model: "llama3.2:3b",
                         messages: [
                             {
                                 role: "system",
                                 content: "You are a black soldier fly in a compost bin in Singapore. " +
-                                " Answer the question as if you were the fly," +
-                                " and keep it informative but simple and a little fun. For questions that" +
-                                " don't need a long answer, keep it concise."
+                                "Answer questions as if you were the fly, keeping it informative but simple " +
+                                "and a little fun. Focus on sustainability, composting, and your ecological role. " +
+                                "Keep responses concise and engaging."
                             },
                             {
                                 role: "user",
@@ -326,25 +384,22 @@
                     const lines = chunk.split('\n');
 
                     for (const line of lines) {
-                        if (line.startsWith('data: ')) {
-                            const data = line.slice(6);
+                        if (line.trim() === '') continue;
+                        
+                        try {
+                            const parsed = JSON.parse(line);
                             
-                            if (data === '[DONE]') {
-                                continue;
+                            if (parsed.message && parsed.message.content) {
+                                fullResponse += parsed.message.content;
+                                responseContent.textContent = fullResponse;
+                                log.scrollTop = log.scrollHeight;
                             }
-
-                            try {
-                                const parsed = JSON.parse(data);
-                                const content = parsed.choices?.[0]?.delta?.content;
-                                
-                                if (content) {
-                                    fullResponse += content;
-                                    responseContent.textContent = fullResponse;
-                                    log.scrollTop = log.scrollHeight;
-                                }
-                            } catch (parseError) {
-                                continue;
+                            
+                            if (parsed.done) {
+                                break;
                             }
+                        } catch (parseError) {
+                            continue;
                         }
                     }
                 }
@@ -369,10 +424,19 @@
             log.scrollTop = log.scrollHeight;
         }
 
-        // Show a welcome message on load
-        window.addEventListener("DOMContentLoaded", () => {
-            appendMessage("Black Soldier Fly", "Hi there! I'm a black soldier fly living in a compost bin in Singapore. " +
-                " Ask me anything about sustainability, composting, or my daily life! You can type or use the microphone button to speak.");
+        // Initialize the app
+        window.addEventListener("DOMContentLoaded", async () => {
+            await checkServices();
+            
+            if (servicesConnected) {
+                appendMessage("Black Soldier Fly", "Hi there! I'm a black soldier fly living in a compost bin in Singapore. " +
+                    "Ask me anything about sustainability, composting, or my daily life! You can type or use the microphone button to speak.");
+            } else {
+                appendMessage("System", "Local AI services are not available. Please start the Whisper server and Ollama service.");
+            }
+            
+            // Check services every 30 seconds
+            setInterval(checkServices, 30000);
         });
     </script>
 </body>
