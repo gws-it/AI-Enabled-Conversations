@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>AI Sustainability Conversation</title>
+    <link href="https://fonts.googleapis.com/css2?family=Jost:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            font-family: 'Jost', sans-serif;
+            background-color: #ffffff;
+            display: flex;
+            height: 100vh;
+        }
+        .image-panel {
+            flex: 1;
+            background: url('/images/bsf.png') no-repeat center center;
+            background-size: contain;
+            background-color: #ffffff;
+        }
+        .chat-panel {
+            flex: 2;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 2vh;
+            background: #ffffff;
+            border: #333;
+            border-radius: 4vh;
+        }
+        .right-panel {
+            border: 0.5vh solid #4e4e4e;
+            background-color: rgb(243, 252, 255);
+            border-radius: 5vh;
+            padding: 4vh;
+            width: 100%;
+            max-width: 90%;
+            height: 80vh;
+            display: flex;
+            flex-direction: column;
+            box-sizing: border-box;
+        }
+        .conversation {
+            margin-bottom: 2vh;
+            font-size: 2vw;
+            line-height: 1.6;
+            color: #4e4e4e;
+            flex: 1;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            padding: 2vh 0;
+        }
+        .conversation strong {
+            display: block;
+            margin-bottom: 0.8vh;
+            color: #000000;
+        }
+        .input-section {
+            margin-top: auto;
+            flex-shrink: 0;
+        }
+        .input-group {
+            display: flex;
+            gap: 2vh;
+            align-items: center;
+        }
+        .input-group input {
+            flex: 1;
+            padding: 1.2vh 2vh;
+            font-size: 2vw;
+            border: 0.2vh solid #ccc;
+            border-radius: 2vh;
+            outline: none;
+            font-family: 'Jost', sans-serif;
+        }
+        .input-group input:focus {
+            border-color: #4e4e4e;
+        }
+        .mic-button {
+            width: 6vh;
+            height: 6vh;
+            background: #cacaca;
+            color: #fff;
+            border: none;
+            border-radius: 50%;
+            font-size: 1.5vw;
+            cursor: pointer;
+            transition: background 0.3s;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .mic-button.recording {
+            background: #e87581;
+        }
+        .status {
+            margin-top: 1vh;
+            color: #888;
+            font-size: 1.5vw;
+            min-height: 2vh;
+        }
+    </style>
+</head>
+<body>
+    <div class="image-panel"></div>
+    <div class="chat-panel">
+        <div class="right-panel">
+            <div id="conversation" class="conversation">
+                <strong>Black Soldier Fly:</strong> Hi! I'm a black soldier fly living in a compost bin in Singapore. Ask me anything about sustainability, composting, or my daily life.
+            </div>
+            <div class="input-section">
+                <div class="input-group">
+                    <input type="text" id="chat-input" placeholder="Ask me something...">
+                    <button id="mic-button" class="mic-button">🎤</button>
+                </div>
+                <div id="status" class="status"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const input = document.getElementById("chat-input");
+        const conversation = document.getElementById("conversation");
+        const micButton = document.getElementById("mic-button");
+        const status = document.getElementById("status");
+
+        let isRecording = false;
+        let mediaRecorder, audioChunks = [];
+        const OPENAI_API_KEY = ''; // your key here
+
+        // Function to dynamically adjust font size based on content
+        function adjustFontSize() {
+            const maxHeight = conversation.clientHeight;
+            let fontSize = 2; // Start with 2vw
+            conversation.style.fontSize = fontSize + 'vw';
+            
+            // Keep reducing font size until content fits
+            while (conversation.scrollHeight > maxHeight && fontSize > 0.8) {
+                fontSize -= 0.1;
+                conversation.style.fontSize = fontSize + 'vw';
+            }
+        }
+
+        input.addEventListener("keypress", async e => {
+            if (e.key === "Enter" && input.value.trim() !== "") {
+                await handleUserInput(input.value.trim());
+                input.value = "";
+            }
+        });
+
+        micButton.addEventListener("click", async () => {
+            if (!isRecording) {
+                await startRecording();
+            } else {
+                await stopRecording();
+            }
+        });
+
+        async function startRecording() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaRecorder = new MediaRecorder(stream);
+                audioChunks = [];
+
+                mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+                mediaRecorder.onstop = async () => {
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+                    await transcribeAudio(audioBlob);
+                };
+
+                mediaRecorder.start();
+                isRecording = true;
+                micButton.classList.add("recording");
+                status.textContent = "Recording... click again to stop.";
+            } catch (err) {
+                console.error("Mic error:", err);
+                status.textContent = "Error accessing microphone.";
+            }
+        }
+
+        async function stopRecording() {
+            if (mediaRecorder && isRecording) {
+                mediaRecorder.stop();
+                mediaRecorder.stream.getTracks().forEach(track => track.stop());
+                isRecording = false;
+                micButton.classList.remove("recording");
+                status.textContent = "Processing...";
+            }
+        }
+
+        async function transcribeAudio(audioBlob) {
+            try {
+                const formData = new FormData();
+                formData.append('file', audioBlob, 'audio.wav');
+                formData.append('model', 'whisper-1');
+
+                const res = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${OPENAI_API_KEY}` },
+                    body: formData
+                });
+
+                const data = await res.json();
+                if (data.text) {
+                    await handleUserInput(data.text.trim());
+                } else {
+                    status.textContent = "Couldn't understand. Try again.";
+                }
+            } catch (err) {
+                console.error("Transcribe error:", err);
+                status.textContent = "Error processing audio.";
+            }
+        }
+
+        async function handleUserInput(question) {
+            conversation.innerHTML = `<strong>You:</strong> ${question}<br><br><strong>Black Soldier Fly:</strong> ...`;
+            adjustFontSize();
+            status.textContent = "Thinking...";
+
+            try {
+                const res = await fetch("https://api.openai.com/v1/chat/completions", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${OPENAI_API_KEY}`
+                    },
+                    body: JSON.stringify({
+                        model: "gpt-4",
+                        messages: [
+                            {
+                                role: "system",
+                                content: "You are a black soldier fly in a compost bin in Singapore. Answer simply, helpfully, and playfully about sustainability."
+                            },
+                            { role: "user", content: question }
+                        ]
+                    })
+                });
+
+                const data = await res.json();
+                const reply = data.choices?.[0]?.message?.content || "Sorry, I didn't get that. Please try again later!";
+                conversation.innerHTML = `<strong>You:</strong> ${question}<br><br><strong>Black Soldier Fly:</strong> ${reply}`;
+                adjustFontSize();
+                status.textContent = "";
+            } catch (err) {
+                console.error("AI error:", err);
+                conversation.innerHTML = `<strong>You:</strong> ${question}<br><br><strong>Black Soldier Fly:</strong> Oops! Couldn't respond.`;
+                adjustFontSize();
+                status.textContent = "";
+            }
+        }
+
+        // Adjust font size on page load for initial content
+        window.addEventListener('load', () => {
+            adjustFontSize();
+        });
+    </script>
+</body>
+</html>
