@@ -16,6 +16,7 @@ print("Whisper model loaded successfully!")
 
 @app.route('/transcribe', methods=['POST'])
 def transcribe_audio():
+    tmpfile_path = None
     try:
         # Get the audio file from the request
         if 'audio' not in request.files:
@@ -23,16 +24,17 @@ def transcribe_audio():
         
         audio_file = request.files['audio']
         
-        # Save the uploaded audio to a temporary file
-        with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmpfile:
-            audio_file.save(tmpfile.name)
+        # Create a temporary file
+        tmpfile_fd, tmpfile_path = tempfile.mkstemp(suffix=".wav")
+        
+        try:
+            # Save the uploaded audio to the temporary file
+            with os.fdopen(tmpfile_fd, 'wb') as tmp:
+                audio_file.save(tmp)
             
             # Transcribe the audio
-            result = model.transcribe(tmpfile.name)
+            result = model.transcribe(tmpfile_path)
             transcript = result['text'].strip()
-            
-            # Clean up the temporary file
-            os.unlink(tmpfile.name)
             
             print(f"Transcribed: {transcript}")
             
@@ -41,8 +43,23 @@ def transcribe_audio():
                 'transcript': transcript
             })
             
+        finally:
+            # Clean up the temporary file
+            try:
+                if tmpfile_path and os.path.exists(tmpfile_path):
+                    os.unlink(tmpfile_path)
+            except PermissionError:
+                # If we can't delete immediately, schedule for later cleanup
+                print(f"Warning: Could not delete temporary file {tmpfile_path} immediately")
+            
     except Exception as e:
         print(f"Error during transcription: {str(e)}")
+        # Try to clean up on error too
+        if tmpfile_path and os.path.exists(tmpfile_path):
+            try:
+                os.unlink(tmpfile_path)
+            except:
+                pass
         return jsonify({
             'success': False,
             'error': str(e)
