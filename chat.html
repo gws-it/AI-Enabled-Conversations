@@ -129,16 +129,43 @@
         const micButton = document.getElementById("mic-button");
         const status = document.getElementById("status");
 
+        let conversationHistory = [
+            {
+                role: "system",
+                content: "You are a black soldier fly in a compost bin in Singapore. " +
+                            " Answer the question as if you were the fly," +
+                            " and keep it informative but simple (at-most 50 words) and a little fun. For questions that" +
+                            " don't need a long answer, keep it concise. Don't use emojis"
+            }
+        ];
+
         let isRecording = false;
         let mediaRecorder, audioChunks = [];
-        const OPENAI_API_KEY = ''; // your key here
+        const OPENAI_API_KEY = '';
+
+        // Function to type out text character by character
+        function typeWriter(element, text, speed = 50) {
+            return new Promise((resolve) => {
+                let i = 0;
+                const timer = setInterval(() => {
+                    if (i < text.length) {
+                        element.innerHTML += text.charAt(i);
+                        i++;
+                        adjustFontSize(); // Adjust font as text appears
+                    } else {
+                        clearInterval(timer);
+                        resolve();
+                    }
+                }, speed);
+            });
+        }
 
         // Function to dynamically adjust font size based on content
         function adjustFontSize() {
             const maxHeight = conversation.clientHeight;
             let fontSize = 2; // Start with 2vw
             conversation.style.fontSize = fontSize + 'vw';
-            
+           
             // Keep reducing font size until content fits
             while (conversation.scrollHeight > maxHeight && fontSize > 0.8) {
                 fontSize -= 0.1;
@@ -148,8 +175,9 @@
 
         input.addEventListener("keypress", async e => {
             if (e.key === "Enter" && input.value.trim() !== "") {
-                await handleUserInput(input.value.trim());
+                const userMessage = input.value.trim();
                 input.value = "";
+                await handleUserInput(userMessage);
             }
         });
 
@@ -216,9 +244,15 @@
         }
 
         async function handleUserInput(question) {
-            conversation.innerHTML = `<strong>You:</strong> ${question}<br><br><strong>Black Soldier Fly:</strong> ...`;
+            conversation.innerHTML = `<strong>You:</strong> ${question}<br><br><strong>Black Soldier Fly:</strong> `;
             adjustFontSize();
             status.textContent = "Thinking...";
+
+            // Add user message
+            conversationHistory.push({
+                role: "user",
+                content: question
+            });
 
             try {
                 const res = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -228,27 +262,27 @@
                         "Authorization": `Bearer ${OPENAI_API_KEY}`
                     },
                     body: JSON.stringify({
-                        model: "gpt-4",
-                        messages: [
-                            {
-                                role: "system",
-                                content: "You are a black soldier fly in a compost bin in Singapore. Answer simply, helpfully, and playfully about sustainability."
-                            },
-                            { role: "user", content: question }
-                        ]
+                        model: "gpt-4o-mini",
+                        messages: conversationHistory,
                     })
                 });
 
                 const data = await res.json();
-                const reply = data.choices?.[0]?.message?.content || "Sorry, I didn't get that. Please try again later!";
-                conversation.innerHTML = `<strong>You:</strong> ${question}<br><br><strong>Black Soldier Fly:</strong> ${reply}`;
-                adjustFontSize();
+                const reply = data.choices?.[0]?.message?.content || "Sorry, something went wrong. Please try again later!";
+               
+                // Clear the "thinking" message and start typing the response
                 status.textContent = "";
+                await typeWriter(conversation, reply, 30); // 30ms between characters
+
+                conversationHistory.push({
+                    role: "assistant",
+                    content: reply
+                });
+        
             } catch (err) {
                 console.error("AI error:", err);
-                conversation.innerHTML = `<strong>You:</strong> ${question}<br><br><strong>Black Soldier Fly:</strong> Oops! Couldn't respond.`;
-                adjustFontSize();
                 status.textContent = "";
+                await typeWriter(conversation, "Oops! Couldn't respond.", 30);
             }
         }
 
