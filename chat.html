@@ -68,7 +68,7 @@
             gap: 2vh;
             align-items: center;
         }
-        .input-group input {
+        /* .input-group input {
             flex: 1;
             padding: 1.2vh 2vh;
             font-size: 2vw;
@@ -79,14 +79,14 @@
         }
         .input-group input:focus {
             border-color: #4e4e4e;
-        }
+        } */
         .mic-button {
-            width: 6vh;
+            width: 100%;
             height: 6vh;
-            background: #cacaca;
-            color: #fff;
+            background: #e8e8e8;
+            color: #000000;
             border: none;
-            border-radius: 50%;
+            border-radius: 2vh;
             font-size: 1.5vw;
             cursor: pointer;
             transition: background 0.3s;
@@ -115,8 +115,8 @@
             </div>
             <div class="input-section">
                 <div class="input-group">
-                    <input type="text" id="chat-input" placeholder="Ask me something...">
-                    <button id="mic-button" class="mic-button">🎤</button>
+                    <!-- <input type="text" id="chat-input" placeholder="Ask me something..."> -->
+                    <button id="mic-button" class="mic-button">Press the MIC button to start speaking</button>
                 </div>
                 <div id="status" class="status"></div>
             </div>
@@ -124,7 +124,7 @@
     </div>
 
     <script>
-        const input = document.getElementById("chat-input");
+        // const input = document.getElementById("chat-input");
         const conversation = document.getElementById("conversation");
         const micButton = document.getElementById("mic-button");
         const status = document.getElementById("status");
@@ -142,6 +142,9 @@
         let isRecording = false;
         let mediaRecorder, audioChunks = [];
         const OPENAI_API_KEY = '';
+        // if (!OPENAI_API_KEY) {
+            // console.error("Please set your OpenAI API key in the script.");
+        // }
 
         // Function to type out text character by character
         function typeWriter(element, text, speed = 50) {
@@ -173,21 +176,32 @@
             }
         }
 
-        input.addEventListener("keypress", async e => {
-            if (e.key === "Enter" && input.value.trim() !== "") {
-                const userMessage = input.value.trim();
-                input.value = "";
-                await handleUserInput(userMessage);
+        // input.addEventListener("keypress", async e => {
+        //     if (e.key === "Enter" && input.value.trim() !== "") {
+        //         const userMessage = input.value.trim();
+        //         input.value = "";
+        //         await handleUserInput(userMessage);
+        //     }
+        // });
+
+        addEventListener("keydown", async e => {
+            if (e.code === "Space" && !e.repeat) {
+                e.preventDefault();
+                if (!isRecording) {
+                    await startRecording();
+                } else {
+                    await stopRecording();
+                }
             }
         });
 
-        micButton.addEventListener("click", async () => {
-            if (!isRecording) {
-                await startRecording();
-            } else {
-                await stopRecording();
-            }
-        });
+        // micButton.addEventListener("click", async () => {
+        //     if (!isRecording) {
+        //         await startRecording();
+        //     } else {
+        //         await stopRecording();
+        //     }
+        // });
 
         async function startRecording() {
             try {
@@ -203,11 +217,13 @@
 
                 mediaRecorder.start();
                 isRecording = true;
+                status.textContent = "";
                 micButton.classList.add("recording");
-                status.textContent = "Recording... click again to stop.";
+                document.querySelector('#mic-button').textContent = "Recording... Press again to stop";
             } catch (err) {
                 console.error("Mic error:", err);
-                status.textContent = "Error accessing microphone.";
+                status.textContent = "";
+                document.querySelector('#mic-button').textContent = "Error accessing microphone";
             }
         }
 
@@ -217,7 +233,7 @@
                 mediaRecorder.stream.getTracks().forEach(track => track.stop());
                 isRecording = false;
                 micButton.classList.remove("recording");
-                status.textContent = "Processing...";
+                document.querySelector('#mic-button').textContent = "Processing...";
             }
         }
 
@@ -236,17 +252,19 @@
                     await handleUserInput(data.transcript.trim());
                 } else {
                     status.textContent = "Couldn't understand. Try again.";
+                document.querySelector('#mic-button').textContent = "Press the MIC button to start speaking";
                 }
             } catch (err) {
                 console.error("Transcribe error:", err);
                 status.textContent = "Error connecting to transcription service. Make sure the Python server is running.";
+                document.querySelector('#mic-button').textContent = "Press the MIC button to start speaking";
             }
         }
 
         async function handleUserInput(question) {
             conversation.innerHTML = `<strong>You:</strong> ${question}<br><br><strong>Black Soldier Fly:</strong> `;
             adjustFontSize();
-            status.textContent = "Thinking...";
+            document.querySelector('#mic-button').textContent = "...";
 
             // Add user message
             conversationHistory.push({
@@ -270,18 +288,18 @@
                 const data = await res.json();
                 const reply = data.choices?.[0]?.message?.content || "Sorry, something went wrong. Please try again later!";
                
-                // Clear the "thinking" message and start typing the response
-                status.textContent = "";
                 await typeWriter(conversation, reply, 30); // 30ms between characters
 
                 conversationHistory.push({
                     role: "assistant",
                     content: reply
                 });
+
+                document.querySelector('#mic-button').textContent = "Press the MIC button to start speaking";
         
             } catch (err) {
+                document.querySelector('#mic-button').textContent = "Press the MIC button to start speaking";
                 console.error("AI error:", err);
-                status.textContent = "";
                 await typeWriter(conversation, "Oops! Couldn't respond.", 30);
             }
         }
