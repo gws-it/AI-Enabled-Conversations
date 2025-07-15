@@ -68,18 +68,6 @@
             gap: 2vh;
             align-items: center;
         }
-        /* .input-group input {
-            flex: 1;
-            padding: 1.2vh 2vh;
-            font-size: 2vw;
-            border: 0.2vh solid #ccc;
-            border-radius: 2vh;
-            outline: none;
-            font-family: 'Jost', sans-serif;
-        }
-        .input-group input:focus {
-            border-color: #4e4e4e;
-        } */
         .mic-button {
             width: 100%;
             height: 7vh;
@@ -115,7 +103,6 @@
             </div>
             <div class="input-section">
                 <div class="input-group">
-                    <!-- <input type="text" id="chat-input" placeholder="Ask me something..."> -->
                     <button id="mic-button" class="mic-button">Press the MIC button to start speaking</button>
                 </div>
                 <div id="status" class="status"></div>
@@ -124,7 +111,6 @@
     </div>
 
     <script>
-        // const input = document.getElementById("chat-input");
         const conversation = document.getElementById("conversation");
         const micButton = document.getElementById("mic-button");
         const status = document.getElementById("status");
@@ -143,10 +129,12 @@
         let mediaRecorder, audioChunks = [];
         const OPENAI_API_KEY = '';
         let isProcessing = false;
+        let currentUtterance = null;
 
-        // Function to type out text character by character
-        function typeWriter(element, text, speed = 50) {
+        function typeWriterWithSpeech(element, text, speed = 50) {
             return new Promise((resolve) => {
+                speak(text);
+                
                 let i = 0;
                 const timer = setInterval(() => {
                     if (i < text.length) {
@@ -173,14 +161,6 @@
             }
         }
 
-        // input.addEventListener("keypress", async e => {
-        //     if (e.key === "Enter" && input.value.trim() !== "") {
-        //         const userMessage = input.value.trim();
-        //         input.value = "";
-        //         await handleUserInput(userMessage);
-        //     }
-        // });
-
         addEventListener("keydown", async e => {
             if (e.code === "Space" && !e.repeat && !isProcessing) {
                 e.preventDefault();
@@ -192,16 +172,12 @@
             }
         });
 
-        // micButton.addEventListener("click", async () => {
-        //     if (!isRecording) {
-        //         await startRecording();
-        //     } else {
-        //         await stopRecording();
-        //     }
-        // });
-
         async function startRecording() {
             try {
+                if (currentUtterance) {
+                    speechSynthesis.cancel();
+                }
+
                 const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
                 mediaRecorder = new MediaRecorder(stream);
                 audioChunks = [];
@@ -235,7 +211,7 @@
         }
 
         async function transcribeAudio(audioBlob) {
-            isProcessing = true; // Set processing flag
+            isProcessing = true;
             try {
                 const formData = new FormData();
                 formData.append('audio', audioBlob, 'audio.wav');
@@ -250,13 +226,13 @@
                     await handleUserInput(data.transcript.trim());
                 } else {
                     conversation.innerHTML = `<strong>Black Soldier Fly:</strong>`;
-                    await typeWriter(conversation, "Sorry, I couldn't quite catch that. Could you repeat what you said?", 30);
-                document.querySelector('#mic-button').textContent = "Press the MIC button to start speaking";
+                    await typeWriterWithSpeech(conversation, "Sorry, I couldn't quite catch that. Could you repeat what you said?", 30);
+                    document.querySelector('#mic-button').textContent = "Press the MIC button to start speaking";
                 }
             } catch (err) {
                 console.error("Transcribe error:", err);
                 conversation.innerHTML = `<strong>Black Soldier Fly:</strong>`;
-                await typeWriter(conversation, "Oops, I'm having some trouble. Please try again later!", 30);
+                await typeWriterWithSpeech(conversation, "Oops, I'm having some trouble. Please try again later!", 30);
                 document.querySelector('#mic-button').textContent = "Press the MIC button to start speaking";
             } finally {
                 isProcessing = false;
@@ -291,7 +267,7 @@
                 const data = await res.json();
                 const reply = data.choices?.[0]?.message?.content || "Oops, I'm having some trouble. Please try again later!";
                
-                await typeWriter(conversation, reply, 30); // 30ms between characters
+                await typeWriterWithSpeech(conversation, reply, 30);
 
                 conversationHistory.push({
                     role: "assistant",
@@ -303,10 +279,21 @@
             } catch (err) {
                 document.querySelector('#mic-button').textContent = "Press the MIC button to start speaking";
                 console.error("AI error:", err);
-                await typeWriter(conversation, "Oops! Couldn't respond.", 30);
+                await typeWriterWithSpeech(conversation, "Oops! Couldn't respond.", 30);
             } finally {
                 isProcessing = false;
             }
+        }
+
+        function speak(text) {
+            speechSynthesis.cancel();
+            
+            currentUtterance = new SpeechSynthesisUtterance(text);
+            currentUtterance.rate = 1.5;
+            currentUtterance.pitch = 0.5;
+            currentUtterance.volume = 0.8;
+            
+            speechSynthesis.speak(currentUtterance);
         }
 
         // Adjust font size on page load for initial content
