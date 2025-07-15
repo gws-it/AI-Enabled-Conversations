@@ -82,7 +82,7 @@
         } */
         .mic-button {
             width: 100%;
-            height: 6vh;
+            height: 7vh;
             background: #e8e8e8;
             color: #000000;
             border: none;
@@ -142,9 +142,7 @@
         let isRecording = false;
         let mediaRecorder, audioChunks = [];
         const OPENAI_API_KEY = '';
-        // if (!OPENAI_API_KEY) {
-            // console.error("Please set your OpenAI API key in the script.");
-        // }
+        let isProcessing = false;
 
         // Function to type out text character by character
         function typeWriter(element, text, speed = 50) {
@@ -154,7 +152,7 @@
                     if (i < text.length) {
                         element.innerHTML += text.charAt(i);
                         i++;
-                        adjustFontSize(); // Adjust font as text appears
+                        adjustFontSize();
                     } else {
                         clearInterval(timer);
                         resolve();
@@ -163,10 +161,9 @@
             });
         }
 
-        // Function to dynamically adjust font size based on content
         function adjustFontSize() {
             const maxHeight = conversation.clientHeight;
-            let fontSize = 2; // Start with 2vw
+            let fontSize = 2;
             conversation.style.fontSize = fontSize + 'vw';
            
             // Keep reducing font size until content fits
@@ -185,7 +182,7 @@
         // });
 
         addEventListener("keydown", async e => {
-            if (e.code === "Space" && !e.repeat) {
+            if (e.code === "Space" && !e.repeat && !isProcessing) {
                 e.preventDefault();
                 if (!isRecording) {
                     await startRecording();
@@ -238,6 +235,7 @@
         }
 
         async function transcribeAudio(audioBlob) {
+            isProcessing = true; // Set processing flag
             try {
                 const formData = new FormData();
                 formData.append('audio', audioBlob, 'audio.wav');
@@ -251,13 +249,17 @@
                 if (data.success && data.transcript) {
                     await handleUserInput(data.transcript.trim());
                 } else {
-                    status.textContent = "Couldn't understand. Try again.";
+                    conversation.innerHTML = `<strong>Black Soldier Fly:</strong>`;
+                    await typeWriter(conversation, "Sorry, I couldn't quite catch that. Could you repeat what you said?", 30);
                 document.querySelector('#mic-button').textContent = "Press the MIC button to start speaking";
                 }
             } catch (err) {
                 console.error("Transcribe error:", err);
-                status.textContent = "Error connecting to transcription service. Make sure the Python server is running.";
+                conversation.innerHTML = `<strong>Black Soldier Fly:</strong>`;
+                await typeWriter(conversation, "Oops, I'm having some trouble. Please try again later!", 30);
                 document.querySelector('#mic-button').textContent = "Press the MIC button to start speaking";
+            } finally {
+                isProcessing = false;
             }
         }
 
@@ -265,6 +267,7 @@
             conversation.innerHTML = `<strong>You:</strong> ${question}<br><br><strong>Black Soldier Fly:</strong> `;
             adjustFontSize();
             document.querySelector('#mic-button').textContent = "...";
+            isProcessing = true;
 
             // Add user message
             conversationHistory.push({
@@ -286,7 +289,7 @@
                 });
 
                 const data = await res.json();
-                const reply = data.choices?.[0]?.message?.content || "Sorry, something went wrong. Please try again later!";
+                const reply = data.choices?.[0]?.message?.content || "Oops, I'm having some trouble. Please try again later!";
                
                 await typeWriter(conversation, reply, 30); // 30ms between characters
 
@@ -301,6 +304,8 @@
                 document.querySelector('#mic-button').textContent = "Press the MIC button to start speaking";
                 console.error("AI error:", err);
                 await typeWriter(conversation, "Oops! Couldn't respond.", 30);
+            } finally {
+                isProcessing = false;
             }
         }
 
