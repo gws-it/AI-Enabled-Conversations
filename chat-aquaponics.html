@@ -65,17 +65,36 @@
         }
         .input-group {
             display: flex;
-            gap: 2vh;
+            gap: 1vh;
             align-items: center;
+            width: 100%;
+        }
+        .message-input {
+            flex-grow: 1;
+            height: 7vh;
+            padding: 0 2vh;
+            border: 0.3vh solid #e0e0e0;
+            border-radius: 2vh;
+            font-size: 1.5vw;
+            font-family: 'Jost', sans-serif;
+            color: #4e4e4e;
+            background-color: #f9f9f9;
+            outline: none;
+        }
+        .message-input:focus {
+            border-color: #aeaeae;
+            background-color: #ffffff;
         }
         .mic-button {
-            width: 100%;
+            width: auto;
+            min-width: 7vh;
+            padding: 0 2vh;
             height: 7vh;
             background: #e8e8e8;
             color: #000000;
             border: none;
             border-radius: 2vh;
-            font-size: 1.5vw;
+            font-size: 1.8vw;
             cursor: pointer;
             transition: background 0.3s;
             flex-shrink: 0;
@@ -85,12 +104,6 @@
         }
         .mic-button.recording {
             background: #e87581;
-        }
-        .status {
-            margin-top: 1vh;
-            color: #888;
-            font-size: 1.5vw;
-            min-height: 2vh;
         }
         .back-button {
             position: absolute;
@@ -119,19 +132,19 @@
             </div>
             <div class="input-section">
                 <div class="input-group">
-                    <button id="mic-button" class="mic-button">Press the MIC button to start speaking</button>
+                    <input type="text" class="message-input" id="message-input" placeholder="Type your message here..." aria-label="Message">
+                    <button id="mic-button" class="mic-button">🎤</button>
                 </div>
-                <div id="status" class="status"></div>
             </div>
         </div>
     </div>
 
-    <a id="back-button" class="back-button" href="home-aquaponics.html">←</a>
+    <a id="back-button" class="back-button" href="home-aquaponics.html">←</a> <!-- ----------------------CHANGE FOR EACH SYSTEM---------------------- -->
 
     <script>
         const conversation = document.getElementById("conversation");
         const micButton = document.getElementById("mic-button");
-        const status = document.getElementById("status");
+        const messageInput = document.getElementById("message-input");
         const characterName = "Aquaponics"; // ----------------------CHANGE FOR EACH SYSTEM---------------------- //
 
         let conversationHistory = [
@@ -151,6 +164,8 @@
         let currentUtterance = null;
 
         function typeWriterWithSpeech(element, text, speed = 50) {
+            messageInput.value = "";
+            messageInput.placeholder = "Type your message here...";
             return new Promise((resolve) => {
                 speak(text);
                 
@@ -181,8 +196,26 @@
         }
 
         addEventListener("keydown", async e => {
-            if (e.code === "Space" && !e.repeat && !isProcessing) {
+            if (e.key === "=" && !e.repeat && !isProcessing) {
                 e.preventDefault();
+                if (!isRecording) {
+                    await startRecording();
+                } else {
+                    await stopRecording();
+                }
+            }
+        });
+
+        messageInput.addEventListener("keydown", async (e) => {
+            if (e.key === "Enter" && !isProcessing && messageInput.value.trim() !== "") {
+                const message = messageInput.value.trim();
+                messageInput.value = "";
+                await handleUserInput(message);
+            }
+        });
+
+        micButton.addEventListener("click", async () => {
+            if (!isProcessing) {
                 if (!isRecording) {
                     await startRecording();
                 } else {
@@ -193,6 +226,8 @@
 
         async function startRecording() {
             try {
+                messageInput.placeholder = "Recording...";
+
                 if (currentUtterance) {
                     speechSynthesis.cancel();
                 }
@@ -209,13 +244,10 @@
 
                 mediaRecorder.start();
                 isRecording = true;
-                status.textContent = "";
                 micButton.classList.add("recording");
-                document.querySelector('#mic-button').textContent = "Recording... Press again to stop";
+                messageInput.disabled = true;
             } catch (err) {
                 console.error("Mic error:", err);
-                status.textContent = "";
-                document.querySelector('#mic-button').textContent = "Error accessing microphone";
             }
         }
 
@@ -225,12 +257,12 @@
                 mediaRecorder.stream.getTracks().forEach(track => track.stop());
                 isRecording = false;
                 micButton.classList.remove("recording");
-                document.querySelector('#mic-button').textContent = "Processing...";
             }
         }
 
         async function transcribeAudio(audioBlob) {
             isProcessing = true;
+            messageInput.value = "Processing...";
             try {
                 const formData = new FormData();
                 formData.append('audio', audioBlob, 'audio.wav');
@@ -239,20 +271,22 @@
                     method: 'POST',
                     body: formData
                 });
-
+                
                 const data = await res.json();
                 if (data.success && data.transcript) {
                     await handleUserInput(data.transcript.trim());
                 } else {
                     conversation.innerHTML = `<strong>${characterName}:</strong>`;
                     await typeWriterWithSpeech(conversation, "Sorry, I couldn't quite catch that. Could you repeat what you said?", 30);
-                    document.querySelector('#mic-button').textContent = "Press the MIC button to start speaking";
+                    messageInput.disabled = false;
+                    document.querySelector('#mic-button').textContent = "🎤";
                 }
             } catch (err) {
                 console.error("Transcribe error:", err);
-                conversation.innerHTML = `<strong>${characterName}</strong>`;
+                conversation.innerHTML = `<strong>${characterName}:</strong>`;
                 await typeWriterWithSpeech(conversation, "Oops, I'm having some trouble. Please try again later!", 30);
-                document.querySelector('#mic-button').textContent = "Press the MIC button to start speaking";
+                messageInput.disabled = false;
+                document.querySelector('#mic-button').textContent = "🎤";
             } finally {
                 isProcessing = false;
             }
@@ -261,8 +295,8 @@
         async function handleUserInput(question) {
             conversation.innerHTML = `<strong>You:</strong> ${question}<br><br><strong>${characterName}:</strong> `;
             adjustFontSize();
-            document.querySelector('#mic-button').textContent = "...";
             isProcessing = true;
+            messageInput.disabled = true;
 
             // Add user message
             conversationHistory.push({
@@ -287,18 +321,20 @@
                 const reply = data.choices?.[0]?.message?.content || "Oops, I'm having some trouble. Please try again later!";
                
                 await typeWriterWithSpeech(conversation, reply, 30);
+                messageInput.disabled = false;
 
                 conversationHistory.push({
                     role: "assistant",
                     content: reply
                 });
 
-                document.querySelector('#mic-button').textContent = "Press the MIC button to start speaking";
+                document.querySelector('#mic-button').textContent = "🎤";
         
             } catch (err) {
-                document.querySelector('#mic-button').textContent = "Press the MIC button to start speaking";
+                document.querySelector('#mic-button').textContent = "🎤";
                 console.error("AI error:", err);
                 await typeWriterWithSpeech(conversation, "Oops! Couldn't respond.", 30);
+                messageInput.disabled = false;
             } finally {
                 isProcessing = false;
             }
