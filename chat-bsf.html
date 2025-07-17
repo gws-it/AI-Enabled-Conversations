@@ -15,7 +15,7 @@
         }
         .image-panel {
             flex: 1;
-            background: url('/images/bsf.png') no-repeat center center;
+            background: url('/images/bsf.png') no-repeat center center; /* ----------------------CHANGE FOR EACH SYSTEM---------------------- */
             background-size: contain;
             background-color: #ffffff;
         }
@@ -92,6 +92,19 @@
             font-size: 1.5vw;
             min-height: 2vh;
         }
+        .back-button {
+            position: absolute;
+            top: 1.5vh;
+            left: 1.5vw;
+            background: transparent;
+            color: #888;
+            text-decoration: none;
+            border-radius: 0.6vh;
+            font-size: 2vw;
+        }
+        .back-button:hover {
+            color: #222;
+        }
     </style>
 </head>
 <body>
@@ -99,7 +112,9 @@
     <div class="chat-panel">
         <div class="right-panel">
             <div id="conversation" class="conversation">
-                <strong>Black Soldier Fly:</strong> Hi! I'm a black soldier fly living in a compost bin in Singapore. Ask me anything about sustainability, composting, or my daily life.
+                <strong>Black Soldier Fly:</strong> <!-- ----------------------CHANGE FOR EACH SYSTEM---------------------- -->
+                Hi! I'm a black soldier fly living here in Vidacity.
+                Ask me anything about my life, my habitat, or how I contribute to sustainability!
             </div>
             <div class="input-section">
                 <div class="input-group">
@@ -110,15 +125,18 @@
         </div>
     </div>
 
+    <a id="back-button" class="back-button" href="home-bsf.html">←</a> <!-- ----------------------CHANGE FOR EACH SYSTEM---------------------- -->
+
     <script>
         const conversation = document.getElementById("conversation");
         const micButton = document.getElementById("mic-button");
         const status = document.getElementById("status");
+        const characterName = "Black Soldier Fly"; // ----------------------CHANGE FOR EACH SYSTEM---------------------- //
 
         let conversationHistory = [
             {
-                role: "system",
-                content: "You are a black soldier fly in a compost bin in Singapore. " +
+                role: "system", // ----------------------CHANGE FOR EACH SYSTEM---------------------- //
+                content: "You are black soldier fly living in Singapore. " +
                             " Answer the question as if you were the fly," +
                             " and keep it informative but simple (at-most 50 words) and a little fun. For questions that" +
                             " don't need a long answer, keep it concise. Don't use emojis"
@@ -225,13 +243,13 @@
                 if (data.success && data.transcript) {
                     await handleUserInput(data.transcript.trim());
                 } else {
-                    conversation.innerHTML = `<strong>Black Soldier Fly:</strong>`;
+                    conversation.innerHTML = `<strong>${characterName}:</strong>`;
                     await typeWriterWithSpeech(conversation, "Sorry, I couldn't quite catch that. Could you repeat what you said?", 30);
                     document.querySelector('#mic-button').textContent = "Press the MIC button to start speaking";
                 }
             } catch (err) {
                 console.error("Transcribe error:", err);
-                conversation.innerHTML = `<strong>Black Soldier Fly:</strong>`;
+                conversation.innerHTML = `<strong>${characterName}</strong>`;
                 await typeWriterWithSpeech(conversation, "Oops, I'm having some trouble. Please try again later!", 30);
                 document.querySelector('#mic-button').textContent = "Press the MIC button to start speaking";
             } finally {
@@ -240,7 +258,7 @@
         }
 
         async function handleUserInput(question) {
-            conversation.innerHTML = `<strong>You:</strong> ${question}<br><br><strong>Black Soldier Fly:</strong> `;
+            conversation.innerHTML = `<strong>You:</strong> ${question}<br><br><strong>${characterName}:</strong> `;
             adjustFontSize();
             document.querySelector('#mic-button').textContent = "...";
             isProcessing = true;
@@ -289,8 +307,8 @@
             speechSynthesis.cancel();
             
             currentUtterance = new SpeechSynthesisUtterance(text);
-            currentUtterance.rate = 1.5;
-            currentUtterance.pitch = 0.5;
+            currentUtterance.rate = 1.7;
+            currentUtterance.pitch = 1.5;
             currentUtterance.volume = 0.8;
             
             speechSynthesis.speak(currentUtterance);

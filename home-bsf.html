@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>Meet the Black Soldier Fly</title>
+    <title>Home</title>
     <link href="https://fonts.googleapis.com/css2?family=Jost:wght@400;600&display=swap" rel="stylesheet">
     <style>
         body {
@@ -13,7 +13,7 @@
             color: #333;
             display: flex;
             flex-direction: column;
-            min-height: 100vh;
+            max-height: 100vh;
         }
         header {
             background: #c7dfe8;
@@ -35,7 +35,7 @@
             flex-wrap: wrap;
             align-items: center;
             justify-content: center;
-            padding: 4vh 2vw;
+            padding: 2vh 1vw;
             gap: 4vw;
         }
         .image-container img {
@@ -45,18 +45,18 @@
             box-shadow: 0 0.4vh 2vh rgba(0,0,0,0.1);
         }
         .content {
-            max-width: 40vw;
+            max-width: 45vw;
         }
         .content h2 {
-            font-size: 3vw;
+            font-size: 2.5vw;
             color: #234e52;
-            margin-bottom: 1vh;
+            margin-bottom: 0.5vh;
         }
         .content p {
-            font-size: 1.5vw;
+            font-size: 1.7vw;
             line-height: 1.6;
-            margin-bottom: 1.5vh;
             color: #444;
+            margin-top: 0.5vh;
         }
         .start-button {
             display: inline-block;
@@ -64,37 +64,46 @@
             background: #234e52;
             color: #fff;
             text-decoration: none;
-            font-size: 1.5vw;
+            font-size: 1.2vw;
             border-radius: 0.6vh;
             transition: background 0.3s;
         }
         .start-button:hover {
-            background: #1a3a3f;
+            background: #222;
         }
     </style>
 </head>
 <body>
 
     <header>
-        <h1>Meet the Black Soldier Fly</h1>
+        <h1>Meet the Black Soldier Fly</h1> <!-- ----------------------CHANGE FOR EACH SYSTEM---------------------- -->
         <p>As part of the AI-Enabled Conversations Project</p>
     </header>
 
     <div class="main">
         <div class="image-container">
-            <img src="/images/bsf.png" alt="Black Soldier Fly" />
+            <img src="/images/bsf.png" alt="Black Soldier Fly" /> <!-- ----------------------CHANGE FOR EACH SYSTEM---------------------- -->
         </div>
         <div class="content">
             <h2>What's this about?</h2>
-            <p>This interactive installation lets you have a conversation with a Black Soldier Fly — a tiny creature that helps recycle food waste into rich compost.</p>
+            <p> <!-- ----------------------CHANGE FOR EACH SYSTEM---------------------- -->
+                Have a conversation with a Black Soldier Fly 
+                — a tiny creature that helps recycle food waste into rich compost.
+            </p>
             
             <h2>How to use it</h2>
-            <p>To begin, press the ON button below. Next, click the MIC button and ask your question, and when finished speaking, click the MIC button again. The Black Soldier Fly will respond to you!</p>
+            <p>
+                To begin, press the ON button below. Next, click the MIC button and ask your question, 
+                and when finished speaking, click the MIC button again. Then read and listen to the response!
+            </p>
         </div>
     </div>
 
     <div style="text-align: center; margin-top: 2vh;">
-        <a class="start-button" href="chat.html">Press the ON button to start a conversation!</a>
+        <a class="start-button" href="chat-bsf.html"> <!-- ----------------------CHANGE FOR EACH SYSTEM---------------------- -->
+            Press the ON button to start a conversation!
+        </a>
     </div>
 </body>
 </html>
+
