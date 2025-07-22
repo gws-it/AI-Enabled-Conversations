@@ -15,7 +15,7 @@
         }
         .image-panel {
             flex: 1;
-            background: url('/images/bsf.png') no-repeat center center;
+            background: url('/images/bsf.png') no-repeat center center; /* CHANGE IMAGE FOR EACH CHARACTER */
             background-size: contain;
             background-color: #ffffff;
         }
@@ -86,30 +86,85 @@
         .mic-button.recording {
             background: #ffa3ac;
         }
-        .status {
-            margin-top: 1vh;
-            color: #888;
-            font-size: 1.5vw;
-            min-height: 2vh;
+        .dropdown-container {
+            position: absolute;
+            top: 2vh;
+            left: 2vw;
+            z-index: 10;
         }
-    </style>
-</head>
-<body>
-    <div class="image-panel"></div>
-    <div class="chat-panel">
+        .dropdown-button {
+            background-color: #ffffff;
+            border: 0.2vh solid #ddd;
+            border-radius: 1vh;
+            padding: 0.8vh 1.5vw;
+            font-size: 1.2vw;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.8vw;
+            box-shadow: 0 0.2vh 0.5vh rgba(0,0,0,0.1);
+        }
+        .dropdown-button:hover {
+            background-color: #f8f8f8;
+        }
+        .dropdown-button::after {
+            content: "▼";
+            font-size: 0.8vw;
+            color: #555;
+        }
+        .dropdown-menu {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            background-color: white;
+            min-width: 100%;
+            box-shadow: 0 0.4vh 0.8vh rgba(0,0,0,0.1);
+            border-radius: 1vh;
+            overflow: hidden;
+            margin-top: 0.5vh;
+        }
+        .dropdown-menu.show {
+            display: block;
+        }
+        .dropdown-item {
+            padding: 1vh 1.5vw;
+            font-size: 1.1vw;
+            color: #333;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .dropdown-item:hover {
+            background-color: #f5f5f5;
+        }
+        .dropdown-item.active {
+            background-color: #eaf5ff;
+            font-weight: 600;
+        }
+        </style>
+    </head>
+    <body>
+        <div class="dropdown-container">
+            <button id="dropdown-button" class="dropdown-button">Black Soldier Fly</button>
+            <div id="dropdown-menu" class="dropdown-menu">
+                <div class="dropdown-item active" data-value="bsf">Black Soldier Fly</div>
+                <div class="dropdown-item" data-value="aquaponics">Aquaponics</div>
+            </div>
+        </div>
+        <div class="image-panel"></div>
+        <div class="chat-panel">
         <div class="right-panel">
             <div id="conversation" class="conversation">
-                <strong>Black Soldier Fly:</strong> Hi! I'm a black soldier fly living in a compost bin in Singapore. Ask me anything about sustainability, composting, or my daily life.
+            <strong>Black Soldier Fly:</strong> Hi! I'm a black soldier fly living in a compost bin in Singapore. Ask me anything about sustainability, composting, or my daily life.
             </div>
             <div class="input-section">
-                <div class="input-group">
-                    <button 
-                    id="mic-button" class="mic-button" 
-                    onclick="if (!isProcessing) { if (!isRecording) { startRecording(); } else { stopRecording(); } }">
-                    Press here to start speaking
-                </button>
-                </div>
-                <div id="status" class="status"></div>
+            <div class="input-group">
+            <button 
+                id="mic-button" class="mic-button" 
+                onclick="if (!isProcessing) { if (!isRecording) { startRecording(); } else { stopRecording(); } }">
+                Press here to start speaking
+            </button>
+            </div>
             </div>
         </div>
     </div>
@@ -117,7 +172,9 @@
     <script>
         const conversation = document.getElementById("conversation");
         const micButton = document.getElementById("mic-button");
-        const status = document.getElementById("status");
+        const dropdownButton = document.getElementById("dropdown-button");
+        const dropdownMenu = document.getElementById("dropdown-menu");
+        const characterName = "Black Soldier Fly"; // ----------------------CHANGE FOR EACH CHARACTER---------------------- //
 
         let conversationHistory = [
             {
@@ -194,12 +251,10 @@
 
                 mediaRecorder.start();
                 isRecording = true;
-                status.textContent = "";
                 micButton.classList.add("recording");
                 document.querySelector('#mic-button').textContent = "Recording... Press again to stop";
             } catch (err) {
                 console.error("Mic error:", err);
-                status.textContent = "";
                 document.querySelector('#mic-button').textContent = "Error accessing microphone";
             }
         }
@@ -229,13 +284,13 @@
                 if (data.success && data.transcript) {
                     await handleUserInput(data.transcript.trim());
                 } else {
-                    conversation.innerHTML = `<strong>Black Soldier Fly:</strong>`;
+                    conversation.innerHTML = `<strong>${characterName}:</strong>`;
                     await typeWriterWithSpeech(conversation, "Sorry, I couldn't quite catch that. Could you repeat what you said?", 30);
                     document.querySelector('#mic-button').textContent = "Press the MIC button to start speaking";
                 }
             } catch (err) {
                 console.error("Transcribe error:", err);
-                conversation.innerHTML = `<strong>Black Soldier Fly:</strong>`;
+                conversation.innerHTML = `<strong>${characterName}:</strong>`;
                 await typeWriterWithSpeech(conversation, "Oops, I'm having some trouble. Please try again later!", 30);
                 document.querySelector('#mic-button').textContent = "Press the MIC button to start speaking";
             } finally {
@@ -303,6 +358,40 @@
         // Adjust font size on page load for initial content
         window.addEventListener('load', () => {
             adjustFontSize();
+        });
+
+        // Dropdown functionality
+        dropdownButton.addEventListener("click", () => {
+            dropdownMenu.classList.toggle("show");
+        });
+
+        dropdownMenu.addEventListener("click", (e) => {
+            if (e.target.classList.contains("dropdown-item")) {
+                const selectedValue = e.target.getAttribute("data-value");
+                const selectedText = e.target.innerText;
+
+                // Update button text
+                dropdownButton.innerText = selectedText;
+
+                // Remove active class from all items and add to the selected one
+                document.querySelectorAll(".dropdown-item").forEach(item => {
+                    item.classList.remove("active");
+                });
+                e.target.classList.add("active");
+
+                // Here you can handle the change event, e.g., fetch new data based on selection
+                console.log("Selected:", selectedValue);
+
+                // Close the dropdown
+                dropdownMenu.classList.remove("show");
+            }
+        });
+
+        // Close dropdown if clicked outside
+        window.addEventListener("click", (e) => {
+            if (!e.target.closest(".dropdown-container")) {
+                dropdownMenu.classList.remove("show");
+            }
         });
     </script>
 </body>

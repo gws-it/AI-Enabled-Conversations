@@ -15,8 +15,9 @@
         }
         .image-panel {
             flex: 1;
-            background: url('/images/aquaponics.png') no-repeat center center;
             background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center center;
             background-color: #ffffff;
         }
         .chat-panel {
@@ -141,11 +142,15 @@
             background-color: #eaf5ff;
             font-weight: 600;
         }
+        .dropdown-button.disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
         </style>
     </head>
     <body>
         <div class="dropdown-container">
-            <button id="dropdown-button" class="dropdown-button">Aquaponics</button>
+            <button id="dropdown-button" class="dropdown-button">Black Soldier Fly</button>
             <div id="dropdown-menu" class="dropdown-menu">
                 <div class="dropdown-item active" data-value="bsf">Black Soldier Fly</div>
                 <div class="dropdown-item" data-value="aquaponics">Aquaponics</div>
@@ -155,13 +160,14 @@
         <div class="chat-panel">
         <div class="right-panel">
             <div id="conversation" class="conversation">
-            <strong>Aquaponics:</strong> Hi! I'm an aquaponics system in Singapore. Ask me anything about sustainability, composting, or my daily life.
+            <strong>Black Soldier Fly:</strong> 
+            Hi! I'm a black soldier fly living in a compost bin in Singapore. 
+            Ask me anything about sustainability, composting, or my daily life.
             </div>
             <div class="input-section">
             <div class="input-group">
             <button 
-                id="mic-button" class="mic-button" 
-                onclick="if (!isProcessing) { if (!isRecording) { startRecording(); } else { stopRecording(); } }">
+                id="mic-button" class="mic-button">
                 Press here to start speaking
             </button>
             </div>
@@ -170,29 +176,81 @@
     </div>
 
     <script>
+        // DOM elements
         const conversation = document.getElementById("conversation");
         const micButton = document.getElementById("mic-button");
         const dropdownButton = document.getElementById("dropdown-button");
         const dropdownMenu = document.getElementById("dropdown-menu");
-        const characterName = "Aquaponics";
+        const imagePanel = document.querySelector('.image-panel');
+        
+        // Character configurations
+        const characters = {
+            bsf: {
+                name: "Black Soldier Fly",
+                image: "/images/bsf.png",
+                greeting: "Hi! I'm a black soldier fly living in a compost bin in Singapore. Ask me anything about sustainability, composting, or my daily life.",
+                systemPrompt: "You are a black soldier fly in a compost bin in Singapore. Answer the question as if you were the fly, and keep it informative but simple (at-most 50 words) and a little fun. For questions that don't need a long answer, keep it concise. Don't use emojis",
+                voiceSettings: {
+                    rate: 1.5,
+                    pitch: 0.5,
+                    volume: 0.8
+                }
+            },
+            aquaponics: {
+                name: "Aquaponics",
+                image: "/images/aquaponics.png",
+                greeting: "Hi! I'm an aquaponics system in Singapore. Ask me anything about sustainability, aquaponics, or how I work.",
+                systemPrompt: "You are an aquaponics system in Singapore. Answer the question as if you were the system, and keep it informative but simple (at-most 50 words) and a little fun. For questions that don't need a long answer, keep it concise. Don't use emojis",
+                voiceSettings: {
+                    rate: 0.5,
+                    pitch: 0.5,
+                    volume: 0.8
+                }
+            }
+        };
+
+        let currentCharacter = "bsf";
+        let characterName = characters[currentCharacter].name;
 
         let conversationHistory = [
             {
-                role: "system", // ----------------------CHANGE FOR EACH SYSTEM---------------------- //
-                content: "You are an aquaponics system in Singapore. " +
-                            " Answer the question as if you were the system," +
-                            " and keep it informative but simple (at-most 50 words) and a little fun. For questions that" +
-                            " don't need a long answer, keep it concise. Don't use emojis"
+                role: "system",
+                content: characters[currentCharacter].systemPrompt
             }
         ];
 
+        // State variables
         let isRecording = false;
         let mediaRecorder, audioChunks = [];
         const OPENAI_API_KEY = '';
         let isProcessing = false;
         let currentUtterance = null;
 
-        function typeWriterWithSpeech(element, text, speed = 50) {
+        // Initialize character
+        function setCharacter(characterId) {
+            if (!characters[characterId]) return;
+            
+            currentCharacter = characterId;
+            characterName = characters[characterId].name;
+            
+            // Update UI
+            dropdownButton.innerText = characterName;
+            imagePanel.style.backgroundImage = `url('${characters[characterId].image}')`;
+            
+            // Reset conversation
+            conversationHistory = [
+                {
+                    role: "system",
+                    content: characters[characterId].systemPrompt
+                }
+            ];
+            
+            // Update greeting
+            conversation.innerHTML = `<strong>${characterName}:</strong> ${characters[characterId].greeting}`;
+            adjustFontSize();
+        }
+
+        function typeWriterWithSpeech(element, text, speed = 30) {
             return new Promise((resolve) => {
                 speak(text);
                 
@@ -222,9 +280,21 @@
             }
         }
 
+        // Event Listeners
         addEventListener("keydown", async e => {
             if (e.code === "Space" && !e.repeat && !isProcessing) {
                 e.preventDefault();
+                if (!isRecording) {
+                    await startRecording();
+                } else {
+                    await stopRecording();
+                }
+            }
+        });
+
+        // Add click handler for mic button
+        micButton.addEventListener("click", async () => {
+            if (!isProcessing) {
                 if (!isRecording) {
                     await startRecording();
                 } else {
@@ -252,10 +322,11 @@
                 mediaRecorder.start();
                 isRecording = true;
                 micButton.classList.add("recording");
-                document.querySelector('#mic-button').textContent = "Recording... Press again to stop";
+                micButton.textContent = "Recording... Press again to stop";
+                dropdownButton.classList.add("disabled");
             } catch (err) {
                 console.error("Mic error:", err);
-                document.querySelector('#mic-button').textContent = "Error accessing microphone";
+                micButton.textContent = "Error accessing microphone";
             }
         }
 
@@ -265,12 +336,14 @@
                 mediaRecorder.stream.getTracks().forEach(track => track.stop());
                 isRecording = false;
                 micButton.classList.remove("recording");
-                document.querySelector('#mic-button').textContent = "Processing...";
+                micButton.textContent = "Processing...";
             }
         }
 
         async function transcribeAudio(audioBlob) {
             isProcessing = true;
+            dropdownButton.classList.add("disabled");
+            
             try {
                 const formData = new FormData();
                 formData.append('audio', audioBlob, 'audio.wav');
@@ -286,23 +359,25 @@
                 } else {
                     conversation.innerHTML = `<strong>${characterName}:</strong>`;
                     await typeWriterWithSpeech(conversation, "Sorry, I couldn't quite catch that. Could you repeat what you said?", 30);
-                    document.querySelector('#mic-button').textContent = "Press the MIC button to start speaking";
+                    micButton.textContent = "Press here to start speaking";
                 }
             } catch (err) {
                 console.error("Transcribe error:", err);
                 conversation.innerHTML = `<strong>${characterName}:</strong>`;
                 await typeWriterWithSpeech(conversation, "Oops, I'm having some trouble. Please try again later!", 30);
-                document.querySelector('#mic-button').textContent = "Press the MIC button to start speaking";
+                micButton.textContent = "Press here to start speaking";
             } finally {
                 isProcessing = false;
+                dropdownButton.classList.remove("disabled");
             }
         }
 
         async function handleUserInput(question) {
-            conversation.innerHTML = `<strong>You:</strong> ${question}<br><br><strong>Black Soldier Fly:</strong> `;
+            conversation.innerHTML = `<strong>You:</strong> ${question}<br><br><strong>${characterName}:</strong> `;
             adjustFontSize();
-            document.querySelector('#mic-button').textContent = "...";
+            micButton.textContent = "...";
             isProcessing = true;
+            dropdownButton.classList.add("disabled");
 
             // Add user message
             conversationHistory.push({
@@ -333,14 +408,15 @@
                     content: reply
                 });
 
-                document.querySelector('#mic-button').textContent = "Press the MIC button to start speaking";
+                micButton.textContent = "Press here to start speaking";
         
             } catch (err) {
-                document.querySelector('#mic-button').textContent = "Press the MIC button to start speaking";
+                micButton.textContent = "Press here to start speaking";
                 console.error("AI error:", err);
                 await typeWriterWithSpeech(conversation, "Oops! Couldn't respond.", 30);
             } finally {
                 isProcessing = false;
+                dropdownButton.classList.remove("disabled");
             }
         }
 
@@ -348,40 +424,44 @@
             speechSynthesis.cancel();
             
             currentUtterance = new SpeechSynthesisUtterance(text);
-            currentUtterance.rate = 0.5;
-            currentUtterance.pitch = 0.5;
-            currentUtterance.volume = 0.8;
+            
+            // Set voice settings based on current character
+            const settings = characters[currentCharacter].voiceSettings;
+            currentUtterance.rate = settings.rate;
+            currentUtterance.pitch = settings.pitch;
+            currentUtterance.volume = settings.volume;
             
             speechSynthesis.speak(currentUtterance);
         }
 
-        // Adjust font size on page load for initial content
-        window.addEventListener('load', () => {
-            adjustFontSize();
-        });
-
         // Dropdown functionality
-        dropdownButton.addEventListener("click", () => {
+        dropdownButton.addEventListener("click", (e) => {
+            // Prevent dropdown from opening if processing
+            if (isProcessing) {
+                e.preventDefault();
+                return;
+            }
             dropdownMenu.classList.toggle("show");
         });
 
         dropdownMenu.addEventListener("click", (e) => {
+            if (isProcessing) {
+                e.preventDefault();
+                return;
+            }
+            
             if (e.target.classList.contains("dropdown-item")) {
                 const selectedValue = e.target.getAttribute("data-value");
-                const selectedText = e.target.innerText;
-
-                // Update button text
-                dropdownButton.innerText = selectedText;
-
-                // Remove active class from all items and add to the selected one
+                
+                // Update active class
                 document.querySelectorAll(".dropdown-item").forEach(item => {
                     item.classList.remove("active");
                 });
                 e.target.classList.add("active");
 
-                // Here you can handle the change event, e.g., fetch new data based on selection
-                console.log("Selected:", selectedValue);
-
+                // Switch character
+                setCharacter(selectedValue);
+                
                 // Close the dropdown
                 dropdownMenu.classList.remove("show");
             }
@@ -392,6 +472,12 @@
             if (!e.target.closest(".dropdown-container")) {
                 dropdownMenu.classList.remove("show");
             }
+        });
+
+        // Initialize on page load
+        window.addEventListener('load', () => {
+            setCharacter(currentCharacter);
+            adjustFontSize();
         });
     </script>
 </body>
