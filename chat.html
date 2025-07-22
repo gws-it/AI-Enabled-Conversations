@@ -87,90 +87,31 @@
         .mic-button.recording {
             background: #ffa3ac;
         }
-        .dropdown-container {
+        .back-button {
             position: absolute;
             top: 2vh;
             left: 2vw;
-            z-index: 10;
-        }
-        .dropdown-button {
-            background-color: #ffffff;
-            border: 0.2vh solid #ddd;
-            border-radius: 1vh;
-            padding: 0.8vh 1.5vw;
-            font-size: 1.2vw;
+            font-size: 4vh;
             cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 0.8vw;
-            box-shadow: 0 0.2vh 0.5vh rgba(0,0,0,0.1);
+            text-decoration: none;
+            color: inherit;
         }
-        .dropdown-button:hover {
-            background-color: #f8f8f8;
-        }
-        .dropdown-button::after {
-            content: "▼";
-            font-size: 0.8vw;
-            color: #555;
-        }
-        .dropdown-menu {
-            display: none;
-            position: absolute;
-            top: 100%;
-            left: 0;
-            background-color: white;
-            min-width: 100%;
-            box-shadow: 0 0.4vh 0.8vh rgba(0,0,0,0.1);
-            border-radius: 1vh;
-            overflow: hidden;
-            margin-top: 0.5vh;
-        }
-        .dropdown-menu.show {
-            display: block;
-        }
-        .dropdown-item {
-            padding: 1vh 1.5vw;
-            font-size: 1.1vw;
-            color: #333;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-        .dropdown-item:hover {
-            background-color: #f5f5f5;
-        }
-        .dropdown-item.active {
-            background-color: #eaf5ff;
-            font-weight: 600;
-        }
-        .dropdown-button.disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-        }
+
         </style>
     </head>
     <body>
-        <div class="dropdown-container">
-            <button id="dropdown-button" class="dropdown-button">Black Soldier Fly</button>
-            <div id="dropdown-menu" class="dropdown-menu">
-                <div class="dropdown-item active" data-value="bsf">Black Soldier Fly</div>
-                <div class="dropdown-item" data-value="aquaponics">Aquaponics</div>
-            </div>
-        </div>
+        <a class="back-button" href="home.html">←</a>
         <div class="image-panel"></div>
         <div class="chat-panel">
         <div class="right-panel">
-            <div id="conversation" class="conversation">
-            <strong>Black Soldier Fly:</strong> 
-            Hi! I'm a black soldier fly living in a compost bin in Singapore. 
-            Ask me anything about sustainability, composting, or my daily life.
-            </div>
+            <div id="conversation" class="conversation"></div>
             <div class="input-section">
-            <div class="input-group">
-            <button 
-                id="mic-button" class="mic-button">
-                Press here to start speaking
-            </button>
-            </div>
+                <div class="input-group">
+                    <button 
+                        id="mic-button" class="mic-button">
+                        Press here to start speaking
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -179,8 +120,6 @@
         // DOM elements
         const conversation = document.getElementById("conversation");
         const micButton = document.getElementById("mic-button");
-        const dropdownButton = document.getElementById("dropdown-button");
-        const dropdownMenu = document.getElementById("dropdown-menu");
         const imagePanel = document.querySelector('.image-panel');
         
         // Character configurations
@@ -191,9 +130,10 @@
                 greeting: "Hi! I'm a black soldier fly living in a compost bin in Singapore. Ask me anything about sustainability, composting, or my daily life.",
                 systemPrompt: "You are a black soldier fly in a compost bin in Singapore. Answer the question as if you were the fly, and keep it informative but simple (at-most 50 words) and a little fun. For questions that don't need a long answer, keep it concise. Don't use emojis",
                 voiceSettings: {
-                    rate: 1.5,
-                    pitch: 0.5,
-                    volume: 0.8
+                    rate: 1,
+                    pitch: 0.4,
+                    volume: 0.8,
+                    lang: "en-GB"
                 }
             },
             aquaponics: {
@@ -202,24 +142,27 @@
                 greeting: "Hi! I'm an aquaponics system in Singapore. Ask me anything about sustainability, aquaponics, or how I work.",
                 systemPrompt: "You are an aquaponics system in Singapore. Answer the question as if you were the system, and keep it informative but simple (at-most 50 words) and a little fun. For questions that don't need a long answer, keep it concise. Don't use emojis",
                 voiceSettings: {
-                    rate: 0.5,
-                    pitch: 0.5,
-                    volume: 0.8
+                    rate: 1.5,
+                    pitch: 1.8,
+                    volume: 0.8,
+                    lang: "en-US"
+                }
+            },
+            bamboo_forest: {
+                name: "Bamboo Forest",
+                image: "/images/bamboo_forest.png",
+                greeting: "Hi! I'm a bamboo forest. Ask me anything about sustainability, bamboo, or what I'm used for.",
+                systemPrompt: "You are a bamboo forest in Singapore. Answer the question as if you were the forest, and keep it informative but simple (at-most 50 words) and a little fun. For questions that don't need a long answer, keep it concise. Don't use emojis",
+                voiceSettings: {
+                    rate: 1,
+                    pitch: 1.4,
+                    volume: 0.8,
+                    lang: "en-GB"
                 }
             }
         };
 
-        let currentCharacter = "bsf";
-        let characterName = characters[currentCharacter].name;
-
-        let conversationHistory = [
-            {
-                role: "system",
-                content: characters[currentCharacter].systemPrompt
-            }
-        ];
-
-        // State variables
+        let conversationHistory = [];
         let isRecording = false;
         let mediaRecorder, audioChunks = [];
         const OPENAI_API_KEY = '';
@@ -233,11 +176,8 @@
             currentCharacter = characterId;
             characterName = characters[characterId].name;
             
-            // Update UI
-            dropdownButton.innerText = characterName;
             imagePanel.style.backgroundImage = `url('${characters[characterId].image}')`;
             
-            // Reset conversation
             conversationHistory = [
                 {
                     role: "system",
@@ -245,7 +185,6 @@
                 }
             ];
             
-            // Update greeting
             conversation.innerHTML = `<strong>${characterName}:</strong> ${characters[characterId].greeting}`;
             adjustFontSize();
         }
@@ -323,7 +262,6 @@
                 isRecording = true;
                 micButton.classList.add("recording");
                 micButton.textContent = "Recording... Press again to stop";
-                dropdownButton.classList.add("disabled");
             } catch (err) {
                 console.error("Mic error:", err);
                 micButton.textContent = "Error accessing microphone";
@@ -342,7 +280,6 @@
 
         async function transcribeAudio(audioBlob) {
             isProcessing = true;
-            dropdownButton.classList.add("disabled");
             
             try {
                 const formData = new FormData();
@@ -368,7 +305,6 @@
                 micButton.textContent = "Press here to start speaking";
             } finally {
                 isProcessing = false;
-                dropdownButton.classList.remove("disabled");
             }
         }
 
@@ -377,7 +313,6 @@
             adjustFontSize();
             micButton.textContent = "...";
             isProcessing = true;
-            dropdownButton.classList.add("disabled");
 
             // Add user message
             conversationHistory.push({
@@ -416,7 +351,6 @@
                 await typeWriterWithSpeech(conversation, "Oops! Couldn't respond.", 30);
             } finally {
                 isProcessing = false;
-                dropdownButton.classList.remove("disabled");
             }
         }
 
@@ -430,53 +364,15 @@
             currentUtterance.rate = settings.rate;
             currentUtterance.pitch = settings.pitch;
             currentUtterance.volume = settings.volume;
-            
+            currentUtterance.lang = settings.lang;
+
             speechSynthesis.speak(currentUtterance);
         }
 
-        // Dropdown functionality
-        dropdownButton.addEventListener("click", (e) => {
-            // Prevent dropdown from opening if processing
-            if (isProcessing) {
-                e.preventDefault();
-                return;
-            }
-            dropdownMenu.classList.toggle("show");
-        });
-
-        dropdownMenu.addEventListener("click", (e) => {
-            if (isProcessing) {
-                e.preventDefault();
-                return;
-            }
-            
-            if (e.target.classList.contains("dropdown-item")) {
-                const selectedValue = e.target.getAttribute("data-value");
-                
-                // Update active class
-                document.querySelectorAll(".dropdown-item").forEach(item => {
-                    item.classList.remove("active");
-                });
-                e.target.classList.add("active");
-
-                // Switch character
-                setCharacter(selectedValue);
-                
-                // Close the dropdown
-                dropdownMenu.classList.remove("show");
-            }
-        });
-
-        // Close dropdown if clicked outside
-        window.addEventListener("click", (e) => {
-            if (!e.target.closest(".dropdown-container")) {
-                dropdownMenu.classList.remove("show");
-            }
-        });
-
-        // Initialize on page load
         window.addEventListener('load', () => {
-            setCharacter(currentCharacter);
+            const urlParams = new URLSearchParams(window.location.search);
+            const character = urlParams.get('character');
+            setCharacter(character);
             adjustFontSize();
         });
     </script>
