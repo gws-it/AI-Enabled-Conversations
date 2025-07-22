@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>AI Sustainability Conversation</title>
+    <link href="https://fonts.googleapis.com/css2?family=Jost:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            font-family: 'Jost', sans-serif;
+            background-color: #ffffff;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+        
+        .image-container {
+            width: 70%;
+            height: 70%;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .image-panel {
+            width: 100%;
+            height: 100%;
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center center;
+            transition: background-image 0.5s ease;
+        }
+        
+        .mic-button {
+            position: absolute;
+            bottom: 5vh;
+            width: 4rem;
+            height: 4rem;
+            background: #e8e8e8;
+            color: #000000;
+            border: none;
+            border-radius: 50%;
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        
+        .mic-button:hover {
+            transform: scale(1.05);
+            background: #f0f0f0;
+        }
+        
+        .mic-button.recording {
+            background: #ffa3ac;
+            animation: pulse 1.5s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(255,163,172, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(255,163,172, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(255,163,172, 0); }
+        }
+        
+        .back-button {
+            position: absolute;
+            top: 2vh;
+            left: 2vw;
+            font-size: 4vh;
+            cursor: pointer;
+            text-decoration: none;
+            color: inherit;
+        }
+    </style>
+</head>
+<body>
+    <a class="back-button" href="home-2.html" onclick="speechSynthesis.cancel();">←</a>
+    <div class="image-container">
+        <div class="image-panel"></div>
+    </div>
+    <button id="mic-button" class="mic-button">🎤</button>
+
+    <script>
+        // DOM elements
+        const micButton = document.getElementById("mic-button");
+        const imagePanel = document.querySelector('.image-panel');        
+        // Character configurations
+        const characters = {
+            bsf: {
+                name: "Black Soldier Fly",
+                image: "/images/bsf.png",
+                greeting: "Hi! I'm a black soldier fly living in a compost bin in Singapore. Ask me anything about sustainability, composting, or my daily life.",
+                systemPrompt: "You are a black soldier fly in a compost bin in Singapore. Answer the question as if you were the fly, and keep it informative but simple (at-most 50 words) and a little fun. For questions that don't need a long answer, keep it concise. Don't use emojis",
+                voiceSettings: {
+                    rate: 1,
+                    pitch: 0.4,
+                    volume: 0.8,
+                    lang: "en-GB"
+                }
+            },
+            aquaponics: {
+                name: "Aquaponics",
+                image: "/images/aquaponics.png",
+                greeting: "Hi! I'm an aquaponics system in Singapore. Ask me anything about sustainability, aquaponics, or how I work.",
+                systemPrompt: "You are an aquaponics system in Singapore. Answer the question as if you were the system, and keep it informative but simple (at-most 50 words) and a little fun. For questions that don't need a long answer, keep it concise. Don't use emojis",
+                voiceSettings: {
+                    rate: 1.5,
+                    pitch: 1.8,
+                    volume: 0.8,
+                    lang: "en-US"
+                }
+            },
+            bamboo_forest: {
+                name: "Bamboo Forest",
+                image: "/images/bamboo_forest.png",
+                greeting: "Hi! I'm a bamboo forest. Ask me anything about sustainability, bamboo, or what I'm used for.",
+                systemPrompt: "You are a bamboo forest in Singapore. Answer the question as if you were the forest, and keep it informative but simple (at-most 50 words) and a little fun. For questions that don't need a long answer, keep it concise. Don't use emojis",
+                voiceSettings: {
+                    rate: 1,
+                    pitch: 1.4,
+                    volume: 0.8,
+                    lang: "en-GB"
+                }
+            }
+        };
+        let conversationHistory = [];
+        let isRecording = false;
+        let mediaRecorder, audioChunks = [];
+        const OPENAI_API_KEY = '';
+        let isProcessing = false;
+        let currentUtterance = null;
+
+        // Initialize character
+        function setCharacter(characterId) {
+            
+            currentCharacter = characterId;
+            characterName = characters[characterId].name;
+            
+            imagePanel.style.backgroundImage = `url('${characters[characterId].image}')`;
+            
+            conversationHistory = [
+                {
+                    role: "system",
+                    content: characters[characterId].systemPrompt
+                }
+            ];
+            
+            // Speak greeting on load
+            setTimeout(() => {
+                speak(characters[characterId].greeting);
+            }, 500);
+        }
+
+        // Event Listeners
+        addEventListener("keydown", async e => {
+            if (e.code === "Space" && !e.repeat && !isProcessing) {
+                e.preventDefault();
+                if (!isRecording) {
+                    await startRecording();
+                } else {
+                    await stopRecording();
+                }
+            }
+        });
+
+        // Add click handler for mic button
+        micButton.addEventListener("click", async () => {
+            if (!isProcessing) {
+                if (!isRecording) {
+                    await startRecording();
+                } else {
+                    await stopRecording();
+                }
+            }
+        });
+
+        async function startRecording() {
+            try {
+                if (currentUtterance) {
+                    speechSynthesis.cancel();
+                }
+
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaRecorder = new MediaRecorder(stream);
+                audioChunks = [];
+
+                mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+                mediaRecorder.onstop = async () => {
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+                    await transcribeAudio(audioBlob);
+                };
+
+                mediaRecorder.start();
+                isRecording = true;
+                micButton.classList.add("recording");
+            } catch (err) {
+                console.error("Mic error:", err);
+            }
+        }
+
+        async function stopRecording() {
+            if (mediaRecorder && isRecording) {
+                mediaRecorder.stop();
+                mediaRecorder.stream.getTracks().forEach(track => track.stop());
+                isRecording = false;
+                micButton.classList.remove("recording");
+            }
+        }
+
+        async function transcribeAudio(audioBlob) {
+            isProcessing = true;
+            
+            try {
+                const formData = new FormData();
+                formData.append('audio', audioBlob, 'audio.wav');
+
+                const res = await fetch('http://localhost:5000/transcribe', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await res.json();
+                if (data.success && data.transcript) {
+                    await handleUserInput(data.transcript.trim());
+                } else {
+                    speak("Sorry, I couldn't quite catch that. Could you repeat what you said?");                }
+            } catch (err) {
+                console.error("Transcribe error:", err);
+                speak("Oops, I'm having some trouble. Please try again later!");
+            } finally {
+                isProcessing = false;
+            }
+        }
+
+        async function handleUserInput(question) {
+            isProcessing = true;
+
+            // Add user message
+            conversationHistory.push({
+                role: "user",
+                content: question
+            });
+
+            try {
+                const res = await fetch("https://api.openai.com/v1/chat/completions", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${OPENAI_API_KEY}`
+                    },
+                    body: JSON.stringify({
+                        model: "gpt-4o-mini",
+                        messages: conversationHistory,
+                    })
+                });
+
+                const data = await res.json();
+                const reply = data.choices?.[0]?.message?.content || "Oops, I'm having some trouble. Please try again later!";
+               
+                // Save the assistant's reply
+                conversationHistory.push({
+                    role: "assistant",
+                    content: reply
+                });
+
+                // Speak the response
+                speak(reply);
+        
+            } catch (err) {
+                console.error("AI error:", err);
+                speak("Oops! I couldn't respond.");
+            } finally {
+                isProcessing = false;
+            }
+        }
+
+        function speak(text) {
+            speechSynthesis.cancel();
+            
+            currentUtterance = new SpeechSynthesisUtterance(text);
+            
+            // Set voice settings based on current character
+            const settings = characters[currentCharacter].voiceSettings;
+            currentUtterance.rate = settings.rate;
+            currentUtterance.pitch = settings.pitch;
+            currentUtterance.volume = settings.volume;
+            currentUtterance.lang = settings.lang;
+
+            speechSynthesis.speak(currentUtterance);
+        }
+
+        window.addEventListener('load', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const character = urlParams.get('character');
+            setCharacter(character);
+        });
+    </script>
+</body>
+</html>
