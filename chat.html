@@ -168,9 +168,10 @@
         const OPENAI_API_KEY = '';
         let isProcessing = false;
         let currentUtterance = null;
+        const BASE_BACKEND_URL = localStorage.getItem("whisper-backend-url");
 
         // Initialize character
-        function setCharacter(characterId) {
+        function setCharacter(characterId) {s
             if (!characters[characterId]) return;
             
             currentCharacter = characterId;
@@ -285,7 +286,7 @@
                 const formData = new FormData();
                 formData.append('audio', audioBlob, 'audio.wav');
 
-                const res = await fetch('http://192.168.50.171:5000/transcribe', {
+                const res = await fetch(`${BASE_BACKEND_URL}/transcribe`, {
                     method: 'POST',
                     body: formData
                 });
