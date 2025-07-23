@@ -285,7 +285,7 @@
                 const formData = new FormData();
                 formData.append('audio', audioBlob, 'audio.wav');
 
-                const res = await fetch('http://localhost:5000/transcribe', {
+                const res = await fetch('http://192.168.50.171:5000/transcribe', {
                     method: 'POST',
                     body: formData
                 });

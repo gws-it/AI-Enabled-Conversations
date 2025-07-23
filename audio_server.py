@@ -70,8 +70,5 @@ def health_check():
     return jsonify({'status': 'healthy', 'model': 'whisper-base'})
 
 if __name__ == '__main__':
-    print("Starting Flask server...")
-    print("Server will be available at: http://localhost:5000")
-    print("Transcription endpoint: http://localhost:5000/transcribe")
     print("-" * 50)
-    app.run(host='localhost', port=5000, debug=True)
+    app.run(host='0.0.0.0', port=5000)
