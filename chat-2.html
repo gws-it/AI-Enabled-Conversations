@@ -5,9 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title>AI Sustainability Conversation</title>
     <link href="https://fonts.googleapis.com/css2?family=Jost:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
         body {
-            margin: 0;
+            max-height: 90vh;
             font-family: 'Jost', sans-serif;
             background-color: #ffffff;
             height: 100vh;
@@ -15,59 +16,72 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            position: relative;
-        }
-        
-        .image-container {
-            width: 70%;
-            height: 70%;
-            position: relative;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            overflow: hidden;
+            padding: 2vh;
+            box-sizing: border-box;
         }
         
         .image-panel {
-            width: 100%;
-            height: 100%;
+            flex: 1;
+            width: 80%;
+            max-height: 70vh;
             background-size: contain;
             background-repeat: no-repeat;
             background-position: center center;
-            transition: background-image 0.5s ease;
+            margin-bottom: 5vh;
         }
         
-        .mic-button {
-            position: absolute;
-            bottom: 5vh;
-            width: 4rem;
-            height: 4rem;
-            background: #e8e8e8;
-            color: #000000;
-            border: none;
+        .controls {
+            display: flex;
+            gap: 5vw;
+            margin-bottom: 3vh;
+        }
+        
+        .circle-button {
+            width: 15vw;
+            height: 15vw;
+            max-width: 70px;
+            max-height: 70px;
             border-radius: 50%;
-            font-size: 1.5rem;
-            cursor: pointer;
-            transition: all 0.3s;
+            background: #f0f0f0;
+            border: none;
             display: flex;
             align-items: center;
             justify-content: center;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 3px 6px rgba(0,0,0,0.1);
         }
         
-        .mic-button:hover {
-            transform: scale(1.05);
-            background: #f0f0f0;
+        .circle-button:hover {
+            background: #e0e0e0;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 10px rgba(0,0,0,0.15);
         }
         
-        .mic-button.recording {
+        .circle-button i {
+            font-size: 1.5rem;
+            color: #444;
+        }
+        
+        .circle-button.recording {
             background: #ffa3ac;
             animation: pulse 1.5s infinite;
         }
+
+        .circle-button.recording i {
+            color: #d41c35; /* Make the microphone icon red when recording */
+        }
         
         @keyframes pulse {
-            0% { box-shadow: 0 0 0 0 rgba(255,163,172, 0.7); }
-            70% { box-shadow: 0 0 0 10px rgba(255,163,172, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(255,163,172, 0); }
+            0% { box-shadow: 0 0 0 0 rgba(255, 163, 172, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(255, 163, 172, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(255, 163, 172, 0); }
+        }
+        
+        .circle-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
         }
         
         .back-button {
@@ -79,229 +93,331 @@
             text-decoration: none;
             color: inherit;
         }
+
+        .status-indicator {
+            font-size: 1.1rem;
+            color: #444;
+            margin-bottom: 2vh;
+            font-family: 'Jost', sans-serif;
+            text-align: center;
+            min-height: 1.6rem;
+            transition: opacity 0.3s ease;
+        }
     </style>
 </head>
 <body>
     <a class="back-button" href="home-2.html" onclick="speechSynthesis.cancel();">←</a>
-    <div class="image-container">
-        <div class="image-panel"></div>
+    <div class="image-panel"></div>
+    <div class="controls">
+        <button id="mic-button" class="circle-button" aria-label="Microphone">
+            <i class="fas fa-microphone"></i>
+        </button>
+        <button id="speak-button" class="circle-button" onclick="speak(lastMessage)" aria-label="Speaker">
+            <i class="fas fa-volume-up"></i>
+        </button>
+        <button id="pause-button" class="circle-button" onclick="togglePause()" aria-label="Pause/Resume">
+            <i class="fas fa-pause"></i>
+        </button>
     </div>
-    <button id="mic-button" class="mic-button">🎤</button>
 
-    <script>
-        // DOM elements
-        const micButton = document.getElementById("mic-button");
-        const imagePanel = document.querySelector('.image-panel');        
-        // Character configurations
-        const characters = {
-            bsf: {
-                name: "Black Soldier Fly",
-                image: "images/bsf.png",
-                greeting: "Hi! I'm a black soldier fly living in a compost bin in Singapore. Ask me anything about sustainability, composting, or my daily life.",
-                systemPrompt: "You are a black soldier fly in a compost bin in Singapore. Answer the question as if you were the fly, and keep it informative but simple (at-most 50 words) and a little fun. For questions that don't need a long answer, keep it concise. Don't use emojis",
-                voiceSettings: {
-                    rate: 1,
-                    pitch: 0.4,
-                    volume: 0.8,
-                    lang: "en-GB"
-                }
-            },
-            aquaponics: {
-                name: "Aquaponics",
-                image: "images/aquaponics.png",
-                greeting: "Hi! I'm an aquaponics system in Singapore. Ask me anything about sustainability, aquaponics, or how I work.",
-                systemPrompt: "You are an aquaponics system in Singapore. Answer the question as if you were the system, and keep it informative but simple (at-most 50 words) and a little fun. For questions that don't need a long answer, keep it concise. Don't use emojis",
-                voiceSettings: {
-                    rate: 1.5,
-                    pitch: 1.8,
-                    volume: 0.8,
-                    lang: "en-US"
-                }
-            },
-            bamboo_forest: {
-                name: "Bamboo Forest",
-                image: "images/bamboo_forest.png",
-                greeting: "Hi! I'm a bamboo forest. Ask me anything about sustainability, bamboo, or what I'm used for.",
-                systemPrompt: "You are a bamboo forest in Singapore. Answer the question as if you were the forest, and keep it informative but simple (at-most 50 words) and a little fun. For questions that don't need a long answer, keep it concise. Don't use emojis",
-                voiceSettings: {
-                    rate: 1,
-                    pitch: 1.4,
-                    volume: 0.8,
-                    lang: "en-GB"
-                }
+    <div id="status-indicator" class="status-indicator"></div>
+
+<script>
+    // DOM elements
+    const micButton = document.getElementById("mic-button");
+    const speakButton = document.getElementById("speak-button");
+    const pauseButton = document.getElementById("pause-button");
+    const imagePanel = document.querySelector('.image-panel');
+    const statusIndicator = document.getElementById("status-indicator");
+    
+    // Character configurations
+    const characters = {
+        bsf: {
+            name: "Black Soldier Fly",
+            image: "images/bsf.png",
+            greeting: "Hi! I'm a black soldier fly living in a compost bin in Singapore. Ask me anything about sustainability, composting, or my daily life.",
+            systemPrompt: "You are a black soldier fly in a compost bin in Singapore. Answer the question as if you were the fly, and keep it informative but simple (at-most 30 words) and a little fun. For questions that don't need a long answer, keep it concise. Don't use emojis",
+            voiceSettings: {
+                rate: 1,
+                pitch: 0.4,
+                volume: 0.8,
+                lang: "en-GB"
             }
-        };
-        let conversationHistory = [];
-        let isRecording = false;
-        let mediaRecorder, audioChunks = [];
-        const OPENAI_API_KEY = '';
-        let isProcessing = false;
-        let currentUtterance = null;
+        },
+        aquaponics: {
+            name: "Aquaponics",
+            image: "images/aquaponics.png",
+            greeting: "Hi! I'm an aquaponics system in Singapore. Ask me anything about sustainability, aquaponics, or how I work.",
+            systemPrompt: "You are an aquaponics system in Singapore. Answer the question as if you were the system, and keep it informative but simple (at-most 30 words) and a little fun. For questions that don't need a long answer, keep it concise. Don't use emojis",
+            voiceSettings: {
+                rate: 1.5,
+                pitch: 1.8,
+                volume: 0.8,
+                lang: "en-US"
+            }
+        },
+        bamboo_forest: {
+            name: "Bamboo Forest",
+            image: "images/bamboo_forest.png",
+            greeting: "Hi! I'm a bamboo forest. Ask me anything about sustainability, bamboo, or what I'm used for.",
+            systemPrompt: "You are a bamboo forest in Singapore. Answer the question as if you were the forest, and keep it informative but simple (at-most 30 words) and a little fun. For questions that don't need a long answer, keep it concise. Don't use emojis",
+            voiceSettings: {
+                rate: 1,
+                pitch: 1.4,
+                volume: 0.8,
+                lang: "en-GB"
+            }
+        }
+    };
 
-        // Initialize character
-        function setCharacter(characterId) {
+    let conversationHistory = [];
+    let isRecording = false;
+    let mediaRecorder, audioChunks = [];
+    let isProcessing = false;
+    let currentUtterance = null;
+    let isPaused = false;
+    const BASE_BACKEND_URL = localStorage.getItem("whisper-backend-url") || "http://localhost:5000";
+    let currentCharacter = 'bsf';
+    let characterName = characters[currentCharacter]?.name;
+    let lastMessage = '';
+
+    function setCharacter(characterId) {
+        if (!characters[characterId]) characterId = 'bsf';
+        
+        currentCharacter = characterId;
+        characterName = characters[characterId].name;
+        
+        imagePanel.style.backgroundImage = `url('${characters[characterId].image}')`;
+        
+        conversationHistory = [
+            {
+                role: "system",
+                content: characters[characterId].systemPrompt
+            }
+        ];
+
+        lastMessage = characters[characterId].greeting;
+        speak(lastMessage);
+    }
+
+    // Event Listeners
+    addEventListener("keydown", async e => {
+        if (e.code === "Space" && !e.repeat && !isProcessing) {
+            e.preventDefault();
+            if (!isRecording) {
+                await startRecording();
+            } else {
+                await stopRecording();
+            }
+        }
+    });
+
+    micButton.addEventListener("click", async () => {
+        if (!isProcessing) {
+            if (!isRecording) {
+                await startRecording();
+            } else {
+                await stopRecording();
+            }
+        }
+    });
+    
+    function togglePause() {
+        if (speechSynthesis.speaking) {
+            if (isPaused) {
+                speechSynthesis.resume();
+                pauseButton.innerHTML = '<i class="fas fa-pause"></i>';
+            } else {
+                speechSynthesis.pause();
+                pauseButton.innerHTML = '<i class="fas fa-play"></i>';
+            }
+            isPaused = !isPaused;
+        }
+    }
+
+    async function startRecording() {
+        try {
+            speakButton.disabled = true;
+            pauseButton.disabled = true;
+            clearStatus(); // Clear any existing status
             
-            currentCharacter = characterId;
-            characterName = characters[characterId].name;
-            
-            imagePanel.style.backgroundImage = `url('${characters[characterId].image}')`;
-            
-            conversationHistory = [
-                {
-                    role: "system",
-                    content: characters[characterId].systemPrompt
-                }
-            ];
-            
-            // Speak greeting on load
+            if (currentUtterance) {
+                speechSynthesis.cancel();
+                isPaused = false;
+                pauseButton.innerHTML = '<i class="fas fa-pause"></i>';
+            }
+
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            mediaRecorder = new MediaRecorder(stream);
+            audioChunks = [];
+
+            mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+            mediaRecorder.onstop = async () => {
+                const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+                await transcribeAudio(audioBlob);
+            };
+
+            mediaRecorder.start();
+            isRecording = true;
+            micButton.classList.add("recording");
+            micButton.querySelector('i').style.color = '#d41c35'; // Make the icon red immediately
+            showStatus("Listening..."); // Show listening status
+        } catch (err) {
+            console.error("Mic error:", err);
+            speakButton.disabled = false;
+            pauseButton.disabled = false;
+            showStatus("Error accessing microphone"); // Show error status
             setTimeout(() => {
-                speak(characters[characterId].greeting);
-            }, 500);
-        }
-
-        // Event Listeners
-        addEventListener("keydown", async e => {
-            if (e.code === "Space" && !e.repeat && !isProcessing) {
-                e.preventDefault();
-                if (!isRecording) {
-                    await startRecording();
-                } else {
-                    await stopRecording();
-                }
-            }
-        });
-
-        // Add click handler for mic button
-        micButton.addEventListener("click", async () => {
-            if (!isProcessing) {
-                if (!isRecording) {
-                    await startRecording();
-                } else {
-                    await stopRecording();
-                }
-            }
-        });
-
-        async function startRecording() {
-            try {
-                if (currentUtterance) {
-                    speechSynthesis.cancel();
-                }
-
-                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                mediaRecorder = new MediaRecorder(stream);
-                audioChunks = [];
-
-                mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
-                mediaRecorder.onstop = async () => {
-                    const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
-                    await transcribeAudio(audioBlob);
-                };
-
-                mediaRecorder.start();
-                isRecording = true;
-                micButton.classList.add("recording");
-            } catch (err) {
-                console.error("Mic error:", err);
-            }
-        }
-
-        async function stopRecording() {
-            if (mediaRecorder && isRecording) {
-                mediaRecorder.stop();
-                mediaRecorder.stream.getTracks().forEach(track => track.stop());
-                isRecording = false;
                 micButton.classList.remove("recording");
-            }
+                micButton.querySelector('i').style.color = ''; // Reset icon color
+                clearStatus(); // Clear the status after delay
+            }, 3000);
         }
+    }
 
-        async function transcribeAudio(audioBlob) {
-            isProcessing = true;
-            
-            try {
-                const formData = new FormData();
-                formData.append('audio', audioBlob, 'audio.wav');
-
-                const res = await fetch('http://192.168.50.171:5000/transcribe', {
-                    method: 'POST',
-                    body: formData
-                });
-
-                const data = await res.json();
-                if (data.success && data.transcript) {
-                    await handleUserInput(data.transcript.trim());
-                } else {
-                    speak("Sorry, I couldn't quite catch that. Could you repeat what you said?");                }
-            } catch (err) {
-                console.error("Transcribe error:", err);
-                speak("Oops, I'm having some trouble. Please try again later!");
-            } finally {
-                isProcessing = false;
-            }
+    async function stopRecording() {
+        if (mediaRecorder && isRecording) {
+            showStatus("Processing..."); // Show processing status
+            mediaRecorder.stop();
+            mediaRecorder.stream.getTracks().forEach(track => track.stop());
+            isRecording = false;
+            micButton.classList.remove("recording");
+            micButton.querySelector('i').style.color = ''; // Reset icon color when recording stops
         }
+    }
 
-        async function handleUserInput(question) {
-            isProcessing = true;
+    async function transcribeAudio(audioBlob) {
+        isProcessing = true;
+        showStatus("Processing..."); // Show processing status
+        
+        try {
+            const formData = new FormData();
+            formData.append('audio', audioBlob, 'audio.wav');
 
-            // Add user message
-            conversationHistory.push({
-                role: "user",
-                content: question
+            const res = await fetch(`${BASE_BACKEND_URL}/transcribe`, {
+                method: 'POST',
+                body: formData
             });
 
-            try {
-                const res = await fetch("https://api.openai.com/v1/chat/completions", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        "Authorization": `Bearer ${OPENAI_API_KEY}`
-                    },
-                    body: JSON.stringify({
-                        model: "gpt-4o-mini",
-                        messages: conversationHistory,
-                    })
-                });
-
-                const data = await res.json();
-                const reply = data.choices?.[0]?.message?.content || "Oops, I'm having some trouble. Please try again later!";
-               
-                // Save the assistant's reply
-                conversationHistory.push({
-                    role: "assistant",
-                    content: reply
-                });
-
-                // Speak the response
-                speak(reply);
-        
-            } catch (err) {
-                console.error("AI error:", err);
-                speak("Oops! I couldn't respond.");
-            } finally {
-                isProcessing = false;
+            const data = await res.json();
+            if (data.success && data.transcript) {
+                await handleUserInput(data.transcript.trim());
+            } else {
+                const errorMsg = "Sorry, I couldn't quite catch that. Could you repeat what you said?";
+                lastMessage = errorMsg;
+                speak(errorMsg);
+                clearStatus(); // Clear the status indicator
             }
+        } catch (err) {
+            console.error("Transcribe error:", err);
+            const errorMsg = "Oops, I'm having some trouble. Please try again later!";
+            lastMessage = errorMsg;
+            speak(errorMsg);
+            clearStatus(); // Clear the status indicator
+        } finally {
+            isProcessing = false;
+            speakButton.disabled = false;
+            pauseButton.disabled = false;
         }
+    }
 
-        function speak(text) {
-            speechSynthesis.cancel();
-            
-            currentUtterance = new SpeechSynthesisUtterance(text);
-            
-            // Set voice settings based on current character
-            const settings = characters[currentCharacter].voiceSettings;
-            currentUtterance.rate = settings.rate;
-            currentUtterance.pitch = settings.pitch;
-            currentUtterance.volume = settings.volume;
-            currentUtterance.lang = settings.lang;
+    async function handleUserInput(question) {
+        isProcessing = true;
+        showStatus("Processing..."); // Show processing status
 
-            speechSynthesis.speak(currentUtterance);
-        }
-
-        window.addEventListener('load', () => {
-            const urlParams = new URLSearchParams(window.location.search);
-            const character = urlParams.get('character');
-            setCharacter(character);
+        conversationHistory.push({
+            role: "user",
+            content: question
         });
-    </script>
+
+        try {
+            const res = await fetch(`${BASE_BACKEND_URL}/chat`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    messages: conversationHistory
+                })
+            });
+
+            const data = await res.json();
+            if (!res.ok) {
+                throw new Error(`Server error: ${res.status} - ${data?.error || "Unknown error"}`);
+            }
+
+            console.log("Chat response:", data);
+            const reply = data.reply || "Oops, I'm having some trouble. Please try again later!";
+         
+            lastMessage = reply;
+            speak(reply);
+            clearStatus(); // Clear the status indicator
+
+            conversationHistory.push({
+                role: "assistant",
+                content: reply
+            });
+    
+        } catch (err) {
+            console.error("AI error:", err);
+            const errorMsg = "Oops! Couldn't respond.";
+            
+            lastMessage = errorMsg;
+            speak(errorMsg);
+            clearStatus(); // Clear the status indicator
+        } finally {
+            isProcessing = false;
+            speakButton.disabled = false;
+            pauseButton.disabled = false;
+        }
+    }
+
+    function speak(text) {
+        console.log("Speaking:", text);
+        speechSynthesis.cancel();
+        isPaused = false;
+        pauseButton.innerHTML = '<i class="fas fa-pause"></i>';
+        clearStatus(); // Clear the status when speaking
+        
+        currentUtterance = new SpeechSynthesisUtterance(text);
+        
+        const settings = characters[currentCharacter].voiceSettings;
+        currentUtterance.rate = settings.rate;
+        currentUtterance.pitch = settings.pitch;
+        currentUtterance.volume = settings.volume;
+        currentUtterance.lang = settings.lang;
+        
+        // Enable pause button when speaking starts
+        currentUtterance.onstart = () => {
+            pauseButton.disabled = false;
+        };
+        
+        // Disable pause button when speaking ends
+        currentUtterance.onend = () => {
+            pauseButton.disabled = true;
+            isPaused = false;
+            pauseButton.innerHTML = '<i class="fas fa-pause"></i>';
+        };
+
+        speechSynthesis.speak(currentUtterance);
+    }
+
+    window.addEventListener('load', () => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const character = urlParams.get('character');
+        setCharacter(character || 'bsf');
+        // Initially disable pause button until speech starts
+        pauseButton.disabled = true;
+    });
+
+    // Add these helper functions to manage the status indicator
+    function showStatus(message) {
+        statusIndicator.textContent = message;
+    }
+
+    function clearStatus() {
+        statusIndicator.textContent = "";
+    }
+</script>
 </body>
 </html>
