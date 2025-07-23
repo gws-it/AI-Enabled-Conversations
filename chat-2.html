@@ -386,19 +386,15 @@
         });
     }
 
-    // Update the handleUserInput function to add the user message immediately
-    // and the assistant message gradually
     async function handleUserInput(question) {
         isProcessing = true;
         showStatus("Processing...");
 
-        // Add user message to conversation history
         conversationHistory.push({
             role: "user",
             content: question
         });
         
-        // If transcript is open, immediately add the user message
         if (transcriptPanel.classList.contains("open")) {
             addMessageToTranscript("user", "You", question);
         }
@@ -424,19 +420,17 @@
     
             lastMessage = reply;
             
-            // Add assistant message to conversation history
             conversationHistory.push({
                 role: "assistant",
                 content: reply
             });
             
-            // If transcript is open, gradually add the assistant message with typewriter effect
-            if (transcriptPanel.classList.contains("open")) {
-                await addAssistantMessageWithTypewriter(reply);
-            }
-            
             speak(reply);
             clearStatus();
+            
+            if (transcriptPanel.classList.contains("open")) {
+                addAssistantMessageWithTypewriter(reply);
+            }
 
         } catch (err) {
             console.error("AI error:", err);
@@ -444,19 +438,18 @@
             
             lastMessage = errorMsg;
             
-            // Add error message to conversation history and transcript
             conversationHistory.push({
                 role: "assistant",
                 content: errorMsg
             });
             
-            // If transcript is open, add the error message with typewriter effect
-            if (transcriptPanel.classList.contains("open")) {
-                await addAssistantMessageWithTypewriter(errorMsg);
-            }
-            
             speak(errorMsg);
             clearStatus();
+            
+            if (transcriptPanel.classList.contains("open")) {
+                addAssistantMessageWithTypewriter(errorMsg);
+            }
+
         } finally {
             isProcessing = false;
             speakButton.disabled = false;
@@ -594,19 +587,20 @@
             
             const errorMsg = "Error accessing microphone. Please check your microphone permissions.";
             
-            // Add error message to conversation history and transcript
+            // Add error message to conversation history
             conversationHistory.push({
                 role: "assistant",
                 content: errorMsg
             });
             
-            // If transcript is open, add the error message with typewriter effect
-            if (transcriptPanel.classList.contains("open")) {
-                await addAssistantMessageWithTypewriter(errorMsg);
-            }
-            
+            // Start speaking immediately
             speak(errorMsg);
             showStatus("Microphone access denied");
+            
+            // If transcript is open, start typewriter effect in parallel
+            if (transcriptPanel.classList.contains("open")) {
+                addAssistantMessageWithTypewriter(errorMsg);
+            }
             
             setTimeout(() => {
                 micButton.classList.remove("recording");
@@ -647,115 +641,53 @@
                 const errorMsg = "Sorry, I couldn't quite catch that. Could you repeat what you said?";
                 lastMessage = errorMsg;
                 
-                // Add error message to conversation history and transcript
+                // Add error message to conversation history
                 conversationHistory.push({
                     role: "assistant",
                     content: errorMsg
                 });
                 
-                // If transcript is open, add the error message with typewriter effect
-                if (transcriptPanel.classList.contains("open")) {
-                    await addAssistantMessageWithTypewriter(errorMsg);
-                }
-                
+                // Start speaking immediately
                 speak(errorMsg);
                 clearStatus();
+                
+                // If transcript is open, start typewriter effect in parallel
+                if (transcriptPanel.classList.contains("open")) {
+                    addAssistantMessageWithTypewriter(errorMsg);
+                }
             }
         } catch (err) {
             console.error("Transcribe error:", err);
             const errorMsg = "Oops, I'm having some trouble. Please try again later!";
             lastMessage = errorMsg;
             
-            // Add error message to conversation history and transcript
+            // Add error message to conversation history
             conversationHistory.push({
                 role: "assistant",
                 content: errorMsg
             });
             
-            // If transcript is open, add the error message with typewriter effect
-            if (transcriptPanel.classList.contains("open")) {
-                await addAssistantMessageWithTypewriter(errorMsg);
-            }
-            
+            // Start speaking immediately
             speak(errorMsg);
             clearStatus();
-        } finally {
-            isProcessing = false;
-            speakButton.disabled = false;
-            pauseButton.disabled = false;
-        }
-    }
-
-    async function handleUserInput(question) {
-        isProcessing = true;
-        showStatus("Processing..."); // Show processing status
-
-        // Add user message to conversation history
-        conversationHistory.push({
-            role: "user",
-            content: question
-        });
-        
-        // If transcript is open, immediately add the user message
-        if (transcriptPanel.classList.contains("open")) {
-            addMessageToTranscript("user", "You", question);
-        }
-
-        try {
-            const res = await fetch(`${BASE_BACKEND_URL}/chat`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({
-                    messages: conversationHistory
-                })
-            });
-
-            const data = await res.json();
-            if (!res.ok) {
-                throw new Error(`Server error: ${res.status} - ${data?.error || "Unknown error"}`);
-            }
-
-            console.log("Chat response:", data);
-            const reply = data.reply || "Oops, I'm having some trouble. Please try again later!";
-     
-            lastMessage = reply;
             
-            // Add assistant message to conversation history
-            conversationHistory.push({
-                role: "assistant",
-                content: reply
-            });
-            
-            // If transcript is open, gradually add the assistant message with typewriter effect
+            // If transcript is open, start typewriter effect in parallel
             if (transcriptPanel.classList.contains("open")) {
-                await addAssistantMessageWithTypewriter(reply);
+                addAssistantMessageWithTypewriter(errorMsg);
             }
-            
-            speak(reply);
-            clearStatus(); // Clear the status indicator
-
-        } catch (err) {
-            console.error("AI error:", err);
-            const errorMsg = "Oops! Couldn't respond.";
-            
-            lastMessage = errorMsg;
-            speak(errorMsg);
-            clearStatus(); // Clear the status indicator
         } finally {
             isProcessing = false;
             speakButton.disabled = false;
             pauseButton.disabled = false;
         }
-    }
+}
 
     function speak(text) {
         console.log("Speaking:", text);
         speechSynthesis.cancel();
         isPaused = false;
         pauseButton.innerHTML = '<i class="fas fa-pause"></i>';
-        clearStatus(); // Clear the status when speaking
+        clearStatus();
         
         currentUtterance = new SpeechSynthesisUtterance(text);
         
@@ -765,12 +697,10 @@
         currentUtterance.volume = settings.volume;
         currentUtterance.lang = settings.lang;
         
-        // Enable pause button when speaking starts
         currentUtterance.onstart = () => {
             pauseButton.disabled = false;
         };
         
-        // Disable pause button when speaking ends
         currentUtterance.onend = () => {
             pauseButton.disabled = true;
             isPaused = false;
@@ -778,11 +708,6 @@
         };
 
         speechSynthesis.speak(currentUtterance);
-
-        // If transcript panel is open, update it
-        if (transcriptPanel.classList.contains("open")) {
-            updateTranscript();
-        }
     }
 
     function togglePause() {
