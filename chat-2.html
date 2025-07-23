@@ -103,6 +103,115 @@
             min-height: 1.6rem;
             transition: opacity 0.3s ease;
         }
+
+        /* Transcript panel styles */
+        .transcript-button {
+            position: absolute;
+            top: 2vh;
+            right: 2vw;
+            width: 10vw;
+            height: 10vw;
+            max-width: 50px;
+            max-height: 50px;
+            border-radius: 50%;
+            background: #f0f0f0;
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 3px 6px rgba(0,0,0,0.1);
+        }
+
+        .transcript-button:hover {
+            background: #e0e0e0;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 10px rgba(0,0,0,0.15);
+        }
+
+        .transcript-button i {
+            font-size: 1.3rem;
+            color: #444;
+        }
+
+        .transcript-panel {
+            position: fixed;
+            top: 0;
+            right: -100%;
+            width: 80%;
+            max-width: 400px;
+            height: 100vh;
+            background: white;
+            box-shadow: -5px 0 15px rgba(0,0,0,0.1);
+            transition: right 0.3s ease;
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .transcript-panel.open {
+            right: 0;
+        }
+
+        .transcript-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 2vh 4vw;
+            border-bottom: 1px solid #eee;
+        }
+
+        .transcript-header h2 {
+            margin: 0;
+            font-size: 1.3rem;
+            color: #333;
+        }
+
+        .close-button {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #555;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.5vh;
+        }
+
+        .transcript-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 3vh 4vw;
+        }
+
+        .transcript-message {
+            margin-bottom: 3vh;
+            padding-bottom: 2vh;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .transcript-message:last-child {
+            border-bottom: none;
+        }
+
+        .transcript-role {
+            font-weight: 600;
+            margin-bottom: 1vh;
+        }
+
+        .transcript-text {
+            line-height: 1.5;
+        }
+
+        .transcript-user {
+            color: #0056b3;
+        }
+
+        .transcript-assistant {
+            color: #28a745;
+        }
     </style>
 </head>
 <body>
@@ -122,6 +231,24 @@
 
     <div id="status-indicator" class="status-indicator"></div>
 
+    <!-- Add this button to the top right corner -->
+    <button id="transcript-button" class="transcript-button" aria-label="Open Transcript">
+        <i class="fas fa-list-alt"></i>
+    </button>
+
+    <!-- Add this transcript panel that will slide in -->
+    <div id="transcript-panel" class="transcript-panel">
+        <div class="transcript-header">
+            <h2>Conversation Transcript</h2>
+            <button id="close-transcript" class="close-button">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div id="transcript-content" class="transcript-content">
+            <!-- Transcript content will be inserted here -->
+        </div>
+    </div>
+
 <script>
     // DOM elements
     const micButton = document.getElementById("mic-button");
@@ -129,6 +256,10 @@
     const pauseButton = document.getElementById("pause-button");
     const imagePanel = document.querySelector('.image-panel');
     const statusIndicator = document.getElementById("status-indicator");
+    const transcriptButton = document.getElementById("transcript-button");
+    const transcriptPanel = document.getElementById("transcript-panel");
+    const closeTranscript = document.getElementById("close-transcript");
+    const transcriptContent = document.getElementById("transcript-content");
     
     // Character configurations
     const characters = {
@@ -222,24 +353,206 @@
         }
     });
     
-    function togglePause() {
-        if (speechSynthesis.speaking) {
-            if (isPaused) {
-                speechSynthesis.resume();
-                pauseButton.innerHTML = '<i class="fas fa-pause"></i>';
-            } else {
-                speechSynthesis.pause();
-                pauseButton.innerHTML = '<i class="fas fa-play"></i>';
-            }
-            isPaused = !isPaused;
+    transcriptButton.addEventListener("click", toggleTranscript);
+    closeTranscript.addEventListener("click", closeTranscriptPanel);
+
+    function toggleTranscript() {
+        transcriptPanel.classList.toggle("open");
+        updateTranscript();
+    }
+
+    function closeTranscriptPanel() {
+        transcriptPanel.classList.remove("open");
+    }
+
+    // Add this typewriter function specifically for transcript updates
+    function typewriterTranscriptEffect(element, text, speed = 15) {
+        let i = 0;
+        element.textContent = ""; // Clear the element
+        
+        return new Promise((resolve) => {
+            const timer = setInterval(() => {
+                if (i < text.length) {
+                    element.textContent += text.charAt(i);
+                    i++;
+                    
+                    // Auto-scroll to keep up with typing
+                    element.parentNode.scrollTop = element.parentNode.scrollHeight;
+                } else {
+                    clearInterval(timer);
+                    resolve();
+                }
+            }, speed);
+        });
+    }
+
+    // Update the handleUserInput function to add the user message immediately
+    // and the assistant message gradually
+    async function handleUserInput(question) {
+        isProcessing = true;
+        showStatus("Processing..."); // Show processing status
+
+        // Add user message to conversation history
+        conversationHistory.push({
+            role: "user",
+            content: question
+        });
+        
+        // If transcript is open, immediately add the user message
+        if (transcriptPanel.classList.contains("open")) {
+            addMessageToTranscript("user", "You", question);
         }
+
+        try {
+            const res = await fetch(`${BASE_BACKEND_URL}/chat`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    messages: conversationHistory
+                })
+            });
+
+            const data = await res.json();
+            if (!res.ok) {
+                throw new Error(`Server error: ${res.status} - ${data?.error || "Unknown error"}`);
+            }
+
+            console.log("Chat response:", data);
+            const reply = data.reply || "Oops, I'm having some trouble. Please try again later!";
+     
+            lastMessage = reply;
+            
+            // Add assistant message to conversation history
+            conversationHistory.push({
+                role: "assistant",
+                content: reply
+            });
+            
+            // If transcript is open, gradually add the assistant message with typewriter effect
+            if (transcriptPanel.classList.contains("open")) {
+                await addAssistantMessageWithTypewriter(reply);
+            }
+            
+            speak(reply);
+            clearStatus(); // Clear the status indicator
+
+        } catch (err) {
+            console.error("AI error:", err);
+            const errorMsg = "Oops! Couldn't respond.";
+            
+            lastMessage = errorMsg;
+            speak(errorMsg);
+            clearStatus(); // Clear the status indicator
+        } finally {
+            isProcessing = false;
+            speakButton.disabled = false;
+            pauseButton.disabled = false;
+        }
+    }
+
+    // Function to add a message to the transcript immediately
+    function addMessageToTranscript(role, displayName, content) {
+        const messageDiv = document.createElement("div");
+        messageDiv.className = "transcript-message";
+        
+        const roleClass = role === "user" ? "transcript-user" : "transcript-assistant";
+        
+        const roleElement = document.createElement("div");
+        roleElement.className = `transcript-role ${roleClass}`;
+        roleElement.textContent = displayName;
+        
+        const textElement = document.createElement("div");
+        textElement.className = "transcript-text";
+        textElement.textContent = content;
+        
+        messageDiv.appendChild(roleElement);
+        messageDiv.appendChild(textElement);
+        
+        transcriptContent.appendChild(messageDiv);
+        
+        // Scroll to the bottom
+        transcriptContent.scrollTop = transcriptContent.scrollHeight;
+        
+        return textElement; // Return the text element for potential typewriter effect
+    }
+
+    // Function to add assistant message with typewriter effect
+    async function addAssistantMessageWithTypewriter(content) {
+        const messageDiv = document.createElement("div");
+        messageDiv.className = "transcript-message";
+        
+        const roleElement = document.createElement("div");
+        roleElement.className = "transcript-role transcript-assistant";
+        roleElement.textContent = characterName;
+        
+        const textElement = document.createElement("div");
+        textElement.className = "transcript-text";
+        textElement.textContent = ""; // Start empty
+        
+        messageDiv.appendChild(roleElement);
+        messageDiv.appendChild(textElement);
+        
+        transcriptContent.appendChild(messageDiv);
+        
+        // Start typewriter effect
+        await typewriterTranscriptEffect(textElement, content, 15);
+    }
+
+    // Replace the updateTranscript function with this new version
+    // that handles the initial rendering of transcript history
+    function updateTranscript() {
+        if (!transcriptPanel.classList.contains("open")) return;
+        
+        // Clear existing content
+        transcriptContent.innerHTML = "";
+        
+        // Add greeting message
+        const greetingDiv = document.createElement("div");
+        greetingDiv.className = "transcript-message";
+        greetingDiv.innerHTML = `
+            <div class="transcript-role transcript-assistant">${characterName}</div>
+            <div class="transcript-text">${characters[currentCharacter].greeting}</div>
+        `;
+        transcriptContent.appendChild(greetingDiv);
+        
+        // Add existing conversation (except system message)
+        let hasUserMessages = false;
+        
+        conversationHistory.forEach((message, index) => {
+            // Skip system message
+            if (index === 0 && message.role === "system") return;
+            
+            if (message.role === "user" || message.role === "assistant") {
+                hasUserMessages = true;
+                
+                const displayName = message.role === "user" ? "You" : characterName;
+                addMessageToTranscript(message.role, displayName, message.content);
+            }
+        });
+        
+        // If no messages yet, add a note
+        if (!hasUserMessages && conversationHistory.length <= 1) {
+            const emptyDiv = document.createElement("div");
+            emptyDiv.className = "transcript-message";
+            emptyDiv.innerHTML = `
+                <div class="transcript-text" style="color: #777; font-style: italic;">
+                    No conversation yet. Start by asking a question!
+                </div>
+            `;
+            transcriptContent.appendChild(emptyDiv);
+        }
+        
+        // Scroll to the bottom
+        transcriptContent.scrollTop = transcriptContent.scrollHeight;
     }
 
     async function startRecording() {
         try {
             speakButton.disabled = true;
             pauseButton.disabled = true;
-            clearStatus(); // Clear any existing status
+            clearStatus; // Clear any existing status
             
             if (currentUtterance) {
                 speechSynthesis.cancel();
@@ -325,10 +638,16 @@
         isProcessing = true;
         showStatus("Processing..."); // Show processing status
 
+        // Add user message to conversation history
         conversationHistory.push({
             role: "user",
             content: question
         });
+        
+        // If transcript is open, immediately add the user message
+        if (transcriptPanel.classList.contains("open")) {
+            addMessageToTranscript("user", "You", question);
+        }
 
         try {
             const res = await fetch(`${BASE_BACKEND_URL}/chat`, {
@@ -348,16 +667,23 @@
 
             console.log("Chat response:", data);
             const reply = data.reply || "Oops, I'm having some trouble. Please try again later!";
-         
+     
             lastMessage = reply;
-            speak(reply);
-            clearStatus(); // Clear the status indicator
-
+            
+            // Add assistant message to conversation history
             conversationHistory.push({
                 role: "assistant",
                 content: reply
             });
-    
+            
+            // If transcript is open, gradually add the assistant message with typewriter effect
+            if (transcriptPanel.classList.contains("open")) {
+                await addAssistantMessageWithTypewriter(reply);
+            }
+            
+            speak(reply);
+            clearStatus(); // Clear the status indicator
+
         } catch (err) {
             console.error("AI error:", err);
             const errorMsg = "Oops! Couldn't respond.";
@@ -400,6 +726,11 @@
         };
 
         speechSynthesis.speak(currentUtterance);
+
+        // If transcript panel is open, update it
+        if (transcriptPanel.classList.contains("open")) {
+            updateTranscript();
+        }
     }
 
     window.addEventListener('load', () => {
