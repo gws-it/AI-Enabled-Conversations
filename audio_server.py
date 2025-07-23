@@ -6,6 +6,10 @@ import os
 import io
 import soundfile as sf
 import numpy as np
+import openai
+from dotenv import load_dotenv
+
+load_dotenv()
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for all routes
@@ -13,6 +17,28 @@ CORS(app)  # Enable CORS for all routes
 print("\nLoading Whisper model...\n")
 model = whisper.load_model("base")  # Options: tiny, base, small, medium, large
 print("Whisper model loaded successfully!")
+
+openai.api_key = os.getenv("OPENAI_API_KEY")
+
+@app.route('/chat', methods=['POST'])
+def chat_with_openai():
+    try:
+        data = request.get_json()
+        messages = data.get('messages', [])
+
+        if not messages:
+            return jsonify({'error': 'No messages provided'}), 400
+
+        response = openai.ChatCompletion.create(
+            model="gpt-4o",  # or gpt-3.5-turbo
+            messages=messages
+        )
+        return jsonify({
+            'reply': response['choices'][0]['message']['content']
+        })
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/transcribe', methods=['POST'])
 def transcribe_audio():
