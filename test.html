@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Speech Synthesis Example</title>
+</head>
+<body>
+<button id="speakBtn">Speak</button>
+<script>
+document.getElementById('speakBtn').addEventListener('click', function() {
+    const msg = new SpeechSynthesisUtterance("Hello World");
+    window.speechSynthesis.speak(msg);
+});
+</script>
+</body>
+</html>

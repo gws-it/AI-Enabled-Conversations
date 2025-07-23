@@ -192,7 +192,13 @@
 
         function typeWriterWithSpeech(element, text, speed = 30) {
             return new Promise((resolve) => {
-                speak(text);
+                // For iOS, ensure we're speaking as a response to a user interaction
+                const userInteracted = true; // This function is called after user interaction
+                
+                // Call speak with a slight delay to ensure it's not blocked
+                setTimeout(() => {
+                    speak(text);
+                }, 100);
                 
                 let i = 0;
                 const timer = setInterval(() => {
@@ -359,18 +365,74 @@
         }
 
         function speak(text) {
-            speechSynthesis.cancel();
+            // Cancel any current speech
+            window.speechSynthesis.cancel();
             
-            currentUtterance = new SpeechSynthesisUtterance(text);
-            
-            // Set voice settings based on current character
-            const settings = characters[currentCharacter].voiceSettings;
-            currentUtterance.rate = settings.rate;
-            currentUtterance.pitch = settings.pitch;
-            currentUtterance.volume = settings.volume;
-            currentUtterance.lang = settings.lang;
+            // Create a short delay to ensure previous speech is fully canceled
+            setTimeout(() => {
+                // Create new utterance
+                currentUtterance = new SpeechSynthesisUtterance(text);
+                
+                // Set voice settings based on current character
+                const settings = characters[currentCharacter].voiceSettings;
+                currentUtterance.rate = settings.rate;
+                currentUtterance.pitch = settings.pitch;
+                currentUtterance.volume = settings.volume;
+                currentUtterance.lang = settings.lang;
+                
+                // Add event handlers for debugging
+                currentUtterance.onstart = () => console.log("Speech started");
+                currentUtterance.onend = () => console.log("Speech ended");
+                currentUtterance.onerror = (e) => console.error("Speech error:", e);
+                
+                // iOS Safari has issues with longer texts, so we'll split if necessary
+                if (text.length > 200 && /iPad|iPhone|iPod/.test(navigator.userAgent)) {
+                    const chunks = splitTextIntoChunks(text, 200);
+                    speakTextChunks(chunks, 0);
+                } else {
+                    window.speechSynthesis.speak(currentUtterance);
+                }
+            }, 100);
+        }
 
-            speechSynthesis.speak(currentUtterance);
+        // Helper function to split text into smaller chunks for iOS
+        function splitTextIntoChunks(text, maxLength) {
+            const chunks = [];
+            let sentences = text.split(/[.!?]+/);
+            let currentChunk = "";
+            
+            for (let sentence of sentences) {
+                sentence = sentence.trim() + ". ";
+                if ((currentChunk + sentence).length <= maxLength) {
+                    currentChunk += sentence;
+                } else {
+                    if (currentChunk) chunks.push(currentChunk);
+                    currentChunk = sentence;
+                }
+            }
+            
+            if (currentChunk) chunks.push(currentChunk);
+            return chunks;
+        }
+
+        // Helper function to speak text chunks sequentially
+        function speakTextChunks(chunks, index) {
+            if (index >= chunks.length) return;
+            
+            const utterance = new SpeechSynthesisUtterance(chunks[index]);
+            
+            // Copy voice settings
+            const settings = characters[currentCharacter].voiceSettings;
+            utterance.rate = settings.rate;
+            utterance.pitch = settings.pitch;
+            utterance.volume = settings.volume;
+            utterance.lang = settings.lang;
+            
+            utterance.onend = () => {
+                speakTextChunks(chunks, index + 1);
+            };
+            
+            window.speechSynthesis.speak(utterance);
         }
 
         window.addEventListener('load', () => {
@@ -378,6 +440,24 @@
             const character = urlParams.get('character');
             setCharacter(character);
             adjustFontSize();
+
+            // Fix for iOS speech synthesis bug
+            if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
+                window.addEventListener('visibilitychange', () => {
+                    if (!document.hidden && currentUtterance) {
+                        // Resume speech when tab becomes visible again
+                        window.speechSynthesis.resume();
+                    }
+                });
+                
+                // Periodic check to resume speech that might have been paused by iOS
+                setInterval(() => {
+                    if (window.speechSynthesis.speaking && !window.speechSynthesis.paused) {
+                        window.speechSynthesis.pause();
+                        window.speechSynthesis.resume();
+                    }
+                }, 10000); // Check every 10 seconds
+            }
         });
     </script>
 </body>
