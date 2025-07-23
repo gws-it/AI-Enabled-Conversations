@@ -390,7 +390,7 @@
     // and the assistant message gradually
     async function handleUserInput(question) {
         isProcessing = true;
-        showStatus("Processing..."); // Show processing status
+        showStatus("Processing...");
 
         // Add user message to conversation history
         conversationHistory.push({
@@ -421,7 +421,7 @@
 
             console.log("Chat response:", data);
             const reply = data.reply || "Oops, I'm having some trouble. Please try again later!";
-     
+    
             lastMessage = reply;
             
             // Add assistant message to conversation history
@@ -436,15 +436,27 @@
             }
             
             speak(reply);
-            clearStatus(); // Clear the status indicator
+            clearStatus();
 
         } catch (err) {
             console.error("AI error:", err);
             const errorMsg = "Oops! Couldn't respond.";
             
             lastMessage = errorMsg;
+            
+            // Add error message to conversation history and transcript
+            conversationHistory.push({
+                role: "assistant",
+                content: errorMsg
+            });
+            
+            // If transcript is open, add the error message with typewriter effect
+            if (transcriptPanel.classList.contains("open")) {
+                await addAssistantMessageWithTypewriter(errorMsg);
+            }
+            
             speak(errorMsg);
-            clearStatus(); // Clear the status indicator
+            clearStatus();
         } finally {
             isProcessing = false;
             speakButton.disabled = false;
@@ -552,7 +564,7 @@
         try {
             speakButton.disabled = true;
             pauseButton.disabled = true;
-            clearStatus; // Clear any existing status
+            clearStatus();
             
             if (currentUtterance) {
                 speechSynthesis.cancel();
@@ -573,17 +585,33 @@
             mediaRecorder.start();
             isRecording = true;
             micButton.classList.add("recording");
-            micButton.querySelector('i').style.color = '#d41c35'; // Make the icon red immediately
-            showStatus("Listening..."); // Show listening status
+            micButton.querySelector('i').style.color = '#d41c35';
+            showStatus("Listening...");
         } catch (err) {
             console.error("Mic error:", err);
             speakButton.disabled = false;
             pauseButton.disabled = false;
-            showStatus("Error accessing microphone"); // Show error status
+            
+            const errorMsg = "Error accessing microphone. Please check your microphone permissions.";
+            
+            // Add error message to conversation history and transcript
+            conversationHistory.push({
+                role: "assistant",
+                content: errorMsg
+            });
+            
+            // If transcript is open, add the error message with typewriter effect
+            if (transcriptPanel.classList.contains("open")) {
+                await addAssistantMessageWithTypewriter(errorMsg);
+            }
+            
+            speak(errorMsg);
+            showStatus("Microphone access denied");
+            
             setTimeout(() => {
                 micButton.classList.remove("recording");
-                micButton.querySelector('i').style.color = ''; // Reset icon color
-                clearStatus(); // Clear the status after delay
+                micButton.querySelector('i').style.color = '';
+                clearStatus();
             }, 3000);
         }
     }
@@ -601,7 +629,7 @@
 
     async function transcribeAudio(audioBlob) {
         isProcessing = true;
-        showStatus("Processing..."); // Show processing status
+        showStatus("Processing...");
         
         try {
             const formData = new FormData();
@@ -618,15 +646,39 @@
             } else {
                 const errorMsg = "Sorry, I couldn't quite catch that. Could you repeat what you said?";
                 lastMessage = errorMsg;
+                
+                // Add error message to conversation history and transcript
+                conversationHistory.push({
+                    role: "assistant",
+                    content: errorMsg
+                });
+                
+                // If transcript is open, add the error message with typewriter effect
+                if (transcriptPanel.classList.contains("open")) {
+                    await addAssistantMessageWithTypewriter(errorMsg);
+                }
+                
                 speak(errorMsg);
-                clearStatus(); // Clear the status indicator
+                clearStatus();
             }
         } catch (err) {
             console.error("Transcribe error:", err);
             const errorMsg = "Oops, I'm having some trouble. Please try again later!";
             lastMessage = errorMsg;
+            
+            // Add error message to conversation history and transcript
+            conversationHistory.push({
+                role: "assistant",
+                content: errorMsg
+            });
+            
+            // If transcript is open, add the error message with typewriter effect
+            if (transcriptPanel.classList.contains("open")) {
+                await addAssistantMessageWithTypewriter(errorMsg);
+            }
+            
             speak(errorMsg);
-            clearStatus(); // Clear the status indicator
+            clearStatus();
         } finally {
             isProcessing = false;
             speakButton.disabled = false;
@@ -730,6 +782,22 @@
         // If transcript panel is open, update it
         if (transcriptPanel.classList.contains("open")) {
             updateTranscript();
+        }
+    }
+
+    function togglePause() {
+        if (!currentUtterance) return;
+        
+        if (isPaused) {
+            // Resume speech
+            speechSynthesis.resume();
+            isPaused = false;
+            pauseButton.innerHTML = '<i class="fas fa-pause"></i>';
+        } else {
+            // Pause speech
+            speechSynthesis.pause();
+            isPaused = true;
+            pauseButton.innerHTML = '<i class="fas fa-play"></i>';
         }
     }
 
