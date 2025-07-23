@@ -96,369 +96,334 @@
             text-decoration: none;
             color: inherit;
         }
-
-        </style>
-    </head>
-    <body>
-        <a class="back-button" href="home.html">←</a>
-        <div class="image-panel"></div>
-        <div class="chat-panel">
-        <div class="right-panel">
-            <div id="conversation" class="conversation"></div>
-            <div class="input-section">
-                <div class="input-group">
-                    <button 
-                        id="mic-button" class="mic-button">
-                        Press here to start speaking
-                    </button>
-                </div>
+    </style>
+</head>
+<body>
+    <a class="back-button" href="home.html">←</a>
+    <div class="image-panel"></div>
+    <div class="chat-panel">
+    <div class="right-panel">
+        <div id="conversation" class="conversation"></div>
+        <div class="input-section">
+            <div class="input-group">
+                <button 
+                    id="mic-button" class="mic-button">
+                    Press here to start speaking
+                </button>
             </div>
         </div>
     </div>
+</div>
 
-    <script>
-        // DOM elements
-        const conversation = document.getElementById("conversation");
-        const micButton = document.getElementById("mic-button");
-        const imagePanel = document.querySelector('.image-panel');
-        
-        // Character configurations
-        const characters = {
-            bsf: {
-                name: "Black Soldier Fly",
-                image: "/images/bsf.png",
-                greeting: "Hi! I'm a black soldier fly living in a compost bin in Singapore. Ask me anything about sustainability, composting, or my daily life.",
-                systemPrompt: "You are a black soldier fly in a compost bin in Singapore. Answer the question as if you were the fly, and keep it informative but simple (at-most 50 words) and a little fun. For questions that don't need a long answer, keep it concise. Don't use emojis",
-                voiceSettings: {
-                    rate: 1,
-                    pitch: 0.4,
-                    volume: 0.8,
-                    lang: "en-GB"
-                }
-            },
-            aquaponics: {
-                name: "Aquaponics",
-                image: "/images/aquaponics.png",
-                greeting: "Hi! I'm an aquaponics system in Singapore. Ask me anything about sustainability, aquaponics, or how I work.",
-                systemPrompt: "You are an aquaponics system in Singapore. Answer the question as if you were the system, and keep it informative but simple (at-most 50 words) and a little fun. For questions that don't need a long answer, keep it concise. Don't use emojis",
-                voiceSettings: {
-                    rate: 1.5,
-                    pitch: 1.8,
-                    volume: 0.8,
-                    lang: "en-US"
-                }
-            },
-            bamboo_forest: {
-                name: "Bamboo Forest",
-                image: "/images/bamboo_forest.png",
-                greeting: "Hi! I'm a bamboo forest. Ask me anything about sustainability, bamboo, or what I'm used for.",
-                systemPrompt: "You are a bamboo forest in Singapore. Answer the question as if you were the forest, and keep it informative but simple (at-most 50 words) and a little fun. For questions that don't need a long answer, keep it concise. Don't use emojis",
-                voiceSettings: {
-                    rate: 1,
-                    pitch: 1.4,
-                    volume: 0.8,
-                    lang: "en-GB"
-                }
+<script>
+    // DOM elements
+    const conversation = document.getElementById("conversation");
+    const micButton = document.getElementById("mic-button");
+    const imagePanel = document.querySelector('.image-panel');
+    
+    // Character configurations
+    const characters = {
+        bsf: {
+            name: "Black Soldier Fly",
+            image: "/images/bsf.png",
+            greeting: "Hi! I'm a black soldier fly living in a compost bin in Singapore. Ask me anything about sustainability, composting, or my daily life.",
+            systemPrompt: "You are a black soldier fly in a compost bin in Singapore. Answer the question as if you were the fly, and keep it informative but simple (at-most 50 words) and a little fun. For questions that don't need a long answer, keep it concise. Don't use emojis",
+            voiceSettings: {
+                rate: 1,
+                pitch: 0.4,
+                volume: 0.8,
+                lang: "en-GB"
             }
-        };
+        },
+        aquaponics: {
+            name: "Aquaponics",
+            image: "/images/aquaponics.png",
+            greeting: "Hi! I'm an aquaponics system in Singapore. Ask me anything about sustainability, aquaponics, or how I work.",
+            systemPrompt: "You are an aquaponics system in Singapore. Answer the question as if you were the system, and keep it informative but simple (at-most 50 words) and a little fun. For questions that don't need a long answer, keep it concise. Don't use emojis",
+            voiceSettings: {
+                rate: 1.5,
+                pitch: 1.8,
+                volume: 0.8,
+                lang: "en-US"
+            }
+        },
+        bamboo_forest: {
+            name: "Bamboo Forest",
+            image: "/images/bamboo_forest.png",
+            greeting: "Hi! I'm a bamboo forest. Ask me anything about sustainability, bamboo, or what I'm used for.",
+            systemPrompt: "You are a bamboo forest in Singapore. Answer the question as if you were the forest, and keep it informative but simple (at-most 50 words) and a little fun. For questions that don't need a long answer, keep it concise. Don't use emojis",
+            voiceSettings: {
+                rate: 1,
+                pitch: 1.4,
+                volume: 0.8,
+                lang: "en-GB"
+            }
+        }
+    };
 
-        let conversationHistory = [];
-        let isRecording = false;
-        let mediaRecorder, audioChunks = [];
-        const OPENAI_API_KEY = '';
-        let isProcessing = false;
-        let currentUtterance = null;
-        const BASE_BACKEND_URL = localStorage.getItem("whisper-backend-url");
+    let conversationHistory = [];
+    let isRecording = false;
+    let mediaRecorder, audioChunks = [];
+    const OPENAI_API_KEY = '';
+    let isProcessing = false;
+    let currentUtterance = null;
+    const BASE_BACKEND_URL = localStorage.getItem("whisper-backend-url");
+    let speechInitialized = false;
 
-        // Initialize character
-        function setCharacter(characterId) {
-            if (!characters[characterId]) return;
-            
-            currentCharacter = characterId;
-            characterName = characters[characterId].name;
-            
-            imagePanel.style.backgroundImage = `url('${characters[characterId].image}')`;
-            
-            conversationHistory = [
-                {
-                    role: "system",
-                    content: characters[characterId].systemPrompt
+    // Initialize speech synthesis for iOS
+    function initializeSpeech() {
+        if (!speechInitialized) {
+            // Create a dummy utterance to initialize speech synthesis
+            const dummyUtterance = new SpeechSynthesisUtterance("");
+            dummyUtterance.volume = 0;
+            speechSynthesis.speak(dummyUtterance);
+            speechInitialized = true;
+        }
+    }
+
+    // Initialize character
+    function setCharacter(characterId) {
+        if (!characters[characterId]) return;
+        
+        currentCharacter = characterId;
+        characterName = characters[characterId].name;
+        
+        imagePanel.style.backgroundImage = `url('${characters[characterId].image}')`;
+        
+        conversationHistory = [
+            {
+                role: "system",
+                content: characters[characterId].systemPrompt
+            }
+        ];
+        
+        conversation.innerHTML = `<strong>${characterName}:</strong> ${characters[characterId].greeting}`;
+        
+        // Initialize speech and speak greeting immediately
+        initializeSpeech();
+        setTimeout(() => {
+            speak(characters[characterId].greeting);
+        }, 100);
+        
+        adjustFontSize();
+    }
+
+    function typeWriterEffect(element, text, speed = 30) {
+        return new Promise((resolve) => {
+            let i = 0;
+            const timer = setInterval(() => {
+                if (i < text.length) {
+                    element.innerHTML += text.charAt(i);
+                    i++;
+                    adjustFontSize();
+                } else {
+                    clearInterval(timer);
+                    resolve();
                 }
-            ];
-            
-            conversation.innerHTML = `<strong>${characterName}:</strong> ${characters[characterId].greeting}`;
-            adjustFontSize();
-        }
+            }, speed);
+        });
+    }
 
-        function typeWriterWithSpeech(element, text, speed = 30) {
-            return new Promise((resolve) => {
-                // For iOS, ensure we're speaking as a response to a user interaction
-                const userInteracted = true; // This function is called after user interaction
-                
-                // Call speak with a slight delay to ensure it's not blocked
-                setTimeout(() => {
-                    speak(text);
-                }, 100);
-                
-                let i = 0;
-                const timer = setInterval(() => {
-                    if (i < text.length) {
-                        element.innerHTML += text.charAt(i);
-                        i++;
-                        adjustFontSize();
-                    } else {
-                        clearInterval(timer);
-                        resolve();
-                    }
-                }, speed);
-            });
-        }
-
-        function adjustFontSize() {
-            const maxHeight = conversation.clientHeight;
-            let fontSize = 2;
+    function adjustFontSize() {
+        const maxHeight = conversation.clientHeight;
+        let fontSize = 2;
+        conversation.style.fontSize = fontSize + 'vw';
+       
+        // Keep reducing font size until content fits
+        while (conversation.scrollHeight > maxHeight && fontSize > 0.8) {
+            fontSize -= 0.1;
             conversation.style.fontSize = fontSize + 'vw';
-           
-            // Keep reducing font size until content fits
-            while (conversation.scrollHeight > maxHeight && fontSize > 0.8) {
-                fontSize -= 0.1;
-                conversation.style.fontSize = fontSize + 'vw';
+        }
+    }
+
+    // Event Listeners
+    addEventListener("keydown", async e => {
+        if (e.code === "Space" && !e.repeat && !isProcessing) {
+            e.preventDefault();
+            initializeSpeech(); // Initialize on user interaction
+            if (!isRecording) {
+                await startRecording();
+            } else {
+                await stopRecording();
             }
         }
+    });
 
-        // Event Listeners
-        addEventListener("keydown", async e => {
-            if (e.code === "Space" && !e.repeat && !isProcessing) {
-                e.preventDefault();
-                if (!isRecording) {
-                    await startRecording();
-                } else {
-                    await stopRecording();
-                }
-            }
-        });
-
-        // Add click handler for mic button
-        micButton.addEventListener("click", async () => {
-            if (!isProcessing) {
-                if (!isRecording) {
-                    await startRecording();
-                } else {
-                    await stopRecording();
-                }
-            }
-        });
-
-        async function startRecording() {
-            try {
-                if (currentUtterance) {
-                    speechSynthesis.cancel();
-                }
-
-                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                mediaRecorder = new MediaRecorder(stream);
-                audioChunks = [];
-
-                mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
-                mediaRecorder.onstop = async () => {
-                    const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
-                    await transcribeAudio(audioBlob);
-                };
-
-                mediaRecorder.start();
-                isRecording = true;
-                micButton.classList.add("recording");
-                micButton.textContent = "Recording... Press again to stop";
-            } catch (err) {
-                console.error("Mic error:", err);
-                micButton.textContent = "Error accessing microphone";
+    // Add click handler for mic button
+    micButton.addEventListener("click", async () => {
+        initializeSpeech(); // Initialize on user interaction
+        if (!isProcessing) {
+            if (!isRecording) {
+                await startRecording();
+            } else {
+                await stopRecording();
             }
         }
+    });
 
-        async function stopRecording() {
-            if (mediaRecorder && isRecording) {
-                mediaRecorder.stop();
-                mediaRecorder.stream.getTracks().forEach(track => track.stop());
-                isRecording = false;
-                micButton.classList.remove("recording");
-                micButton.textContent = "Processing...";
+    async function startRecording() {
+        try {
+            if (currentUtterance) {
+                speechSynthesis.cancel();
             }
+
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            mediaRecorder = new MediaRecorder(stream);
+            audioChunks = [];
+
+            mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+            mediaRecorder.onstop = async () => {
+                const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+                await transcribeAudio(audioBlob);
+            };
+
+            mediaRecorder.start();
+            isRecording = true;
+            micButton.classList.add("recording");
+            micButton.textContent = "Recording... Press again to stop";
+        } catch (err) {
+            console.error("Mic error:", err);
+            micButton.textContent = "Error accessing microphone";
         }
+    }
 
-        async function transcribeAudio(audioBlob) {
-            isProcessing = true;
-            
-            try {
-                const formData = new FormData();
-                formData.append('audio', audioBlob, 'audio.wav');
-
-                const res = await fetch(`${BASE_BACKEND_URL}/transcribe`, {
-                    method: 'POST',
-                    body: formData
-                });
-
-                const data = await res.json();
-                if (data.success && data.transcript) {
-                    await handleUserInput(data.transcript.trim());
-                } else {
-                    conversation.innerHTML = `<strong>${characterName}:</strong>`;
-                    await typeWriterWithSpeech(conversation, "Sorry, I couldn't quite catch that. Could you repeat what you said?", 30);
-                    micButton.textContent = "Press here to start speaking";
-                }
-            } catch (err) {
-                console.error("Transcribe error:", err);
-                conversation.innerHTML = `<strong>${characterName}:</strong>`;
-                await typeWriterWithSpeech(conversation, "Oops, I'm having some trouble. Please try again later!", 30);
-                micButton.textContent = "Press here to start speaking";
-            } finally {
-                isProcessing = false;
-            }
+    async function stopRecording() {
+        if (mediaRecorder && isRecording) {
+            mediaRecorder.stop();
+            mediaRecorder.stream.getTracks().forEach(track => track.stop());
+            isRecording = false;
+            micButton.classList.remove("recording");
+            micButton.textContent = "Processing...";
         }
+    }
 
-        async function handleUserInput(question) {
-            conversation.innerHTML = `<strong>You:</strong> ${question}<br><br><strong>${characterName}:</strong> `;
-            adjustFontSize();
-            micButton.textContent = "...";
-            isProcessing = true;
+    async function transcribeAudio(audioBlob) {
+        isProcessing = true;
+        
+        try {
+            const formData = new FormData();
+            formData.append('audio', audioBlob, 'audio.wav');
 
-            // Add user message
-            conversationHistory.push({
-                role: "user",
-                content: question
+            const res = await fetch(`${BASE_BACKEND_URL}/transcribe`, {
+                method: 'POST',
+                body: formData
             });
 
-            try {
-                const res = await fetch(`${BASE_BACKEND_URL}/chat`, {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify({
-                        messages: conversationHistory
-                    })
-                });
-
-                const data = await res.json();
-                if (!res.ok) {
-                    throw new Error(`Server error: ${res.status} - ${data?.error || "Unknown error"}`);
-                }
-
-                console.log("Chat response:", data); // Debugging
-                const reply = data.reply || "Oops, I'm having some trouble. Please try again later!";
-             
-                await typeWriterWithSpeech(conversation, reply, 30);
-
-                conversationHistory.push({
-                    role: "assistant",
-                    content: reply
-                });
-
+            const data = await res.json();
+            if (data.success && data.transcript) {
+                await handleUserInput(data.transcript.trim());
+            } else {
+                const errorMsg = "Sorry, I couldn't quite catch that. Could you repeat what you said?";
+                conversation.innerHTML = `<strong>${characterName}:</strong>`;
+                
+                // Speak immediately, then do typewriter effect
+                speak(errorMsg);
+                await typeWriterEffect(conversation, errorMsg, 30);
+                
                 micButton.textContent = "Press here to start speaking";
-        
-            } catch (err) {
-                micButton.textContent = "Press here to start speaking";
-                console.error("AI error:", err);
-                await typeWriterWithSpeech(conversation, "Oops! Couldn't respond.", 30);
-            } finally {
-                isProcessing = false;
             }
+        } catch (err) {
+            console.error("Transcribe error:", err);
+            const errorMsg = "Oops, I'm having some trouble. Please try again later!";
+            conversation.innerHTML = `<strong>${characterName}:</strong>`;
+            
+            // Speak immediately, then do typewriter effect
+            speak(errorMsg);
+            await typeWriterEffect(conversation, errorMsg, 30);
+            
+            micButton.textContent = "Press here to start speaking";
+        } finally {
+            isProcessing = false;
         }
+    }
 
-        function speak(text) {
-            // Cancel any current speech
-            window.speechSynthesis.cancel();
-            
-            // Create a short delay to ensure previous speech is fully canceled
-            setTimeout(() => {
-                // Create new utterance
-                currentUtterance = new SpeechSynthesisUtterance(text);
-                
-                // Set voice settings based on current character
-                const settings = characters[currentCharacter].voiceSettings;
-                currentUtterance.rate = settings.rate;
-                currentUtterance.pitch = settings.pitch;
-                currentUtterance.volume = settings.volume;
-                currentUtterance.lang = settings.lang;
-                
-                // Add event handlers for debugging
-                currentUtterance.onstart = () => console.log("Speech started");
-                currentUtterance.onend = () => console.log("Speech ended");
-                currentUtterance.onerror = (e) => console.error("Speech error:", e);
-                
-                // iOS Safari has issues with longer texts, so we'll split if necessary
-                if (text.length > 200 && /iPad|iPhone|iPod/.test(navigator.userAgent)) {
-                    const chunks = splitTextIntoChunks(text, 200);
-                    speakTextChunks(chunks, 0);
-                } else {
-                    window.speechSynthesis.speak(currentUtterance);
-                }
-            }, 100);
-        }
+    async function handleUserInput(question) {
+        conversation.innerHTML = `<strong>You:</strong> ${question}<br><br><strong>${characterName}:</strong> `;
+        adjustFontSize();
+        micButton.textContent = "...";
+        isProcessing = true;
 
-        // Helper function to split text into smaller chunks for iOS
-        function splitTextIntoChunks(text, maxLength) {
-            const chunks = [];
-            let sentences = text.split(/[.!?]+/);
-            let currentChunk = "";
-            
-            for (let sentence of sentences) {
-                sentence = sentence.trim() + ". ";
-                if ((currentChunk + sentence).length <= maxLength) {
-                    currentChunk += sentence;
-                } else {
-                    if (currentChunk) chunks.push(currentChunk);
-                    currentChunk = sentence;
-                }
-            }
-            
-            if (currentChunk) chunks.push(currentChunk);
-            return chunks;
-        }
-
-        // Helper function to speak text chunks sequentially
-        function speakTextChunks(chunks, index) {
-            if (index >= chunks.length) return;
-            
-            const utterance = new SpeechSynthesisUtterance(chunks[index]);
-            
-            // Copy voice settings
-            const settings = characters[currentCharacter].voiceSettings;
-            utterance.rate = settings.rate;
-            utterance.pitch = settings.pitch;
-            utterance.volume = settings.volume;
-            utterance.lang = settings.lang;
-            
-            utterance.onend = () => {
-                speakTextChunks(chunks, index + 1);
-            };
-            
-            window.speechSynthesis.speak(utterance);
-        }
-
-        window.addEventListener('load', () => {
-            const urlParams = new URLSearchParams(window.location.search);
-            const character = urlParams.get('character');
-            setCharacter(character);
-            adjustFontSize();
-
-            // Fix for iOS speech synthesis bug
-            if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
-                window.addEventListener('visibilitychange', () => {
-                    if (!document.hidden && currentUtterance) {
-                        // Resume speech when tab becomes visible again
-                        window.speechSynthesis.resume();
-                    }
-                });
-                
-                // Periodic check to resume speech that might have been paused by iOS
-                setInterval(() => {
-                    if (window.speechSynthesis.speaking && !window.speechSynthesis.paused) {
-                        window.speechSynthesis.pause();
-                        window.speechSynthesis.resume();
-                    }
-                }, 10000); // Check every 10 seconds
-            }
+        // Add user message
+        conversationHistory.push({
+            role: "user",
+            content: question
         });
-    </script>
+
+        try {
+            const res = await fetch(`${BASE_BACKEND_URL}/chat`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    messages: conversationHistory
+                })
+            });
+
+            const data = await res.json();
+            if (!res.ok) {
+                throw new Error(`Server error: ${res.status} - ${data?.error || "Unknown error"}`);
+            }
+
+            console.log("Chat response:", data);
+            const reply = data.reply || "Oops, I'm having some trouble. Please try again later!";
+         
+            // CRITICAL FIX: Speak immediately when we get the response
+            speak(reply);
+            
+            // Then do the typewriter effect
+            await typeWriterEffect(conversation, reply, 30);
+
+            conversationHistory.push({
+                role: "assistant",
+                content: reply
+            });
+
+            micButton.textContent = "Press here to start speaking";
+    
+        } catch (err) {
+            micButton.textContent = "Press here to start speaking";
+            console.error("AI error:", err);
+            const errorMsg = "Oops! Couldn't respond.";
+            
+            // Speak immediately, then do typewriter effect
+            speak(errorMsg);
+            await typeWriterEffect(conversation, errorMsg, 30);
+        } finally {
+            isProcessing = false;
+        }
+    }
+
+    function speak(text) {
+        // Cancel any existing speech
+        speechSynthesis.cancel();
+        
+        // Small delay to ensure cancellation is processed
+        setTimeout(() => {
+            currentUtterance = new SpeechSynthesisUtterance(text);
+            
+            // Set voice settings based on current character
+            const settings = characters[currentCharacter].voiceSettings;
+            currentUtterance.rate = settings.rate;
+            currentUtterance.pitch = settings.pitch;
+            currentUtterance.volume = settings.volume;
+            currentUtterance.lang = settings.lang;
+
+            // Add error handling
+            currentUtterance.onerror = (event) => {
+                console.error('Speech synthesis error:', event);
+            };
+
+            speechSynthesis.speak(currentUtterance);
+        }, 50);
+    }
+
+    window.addEventListener('load', () => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const character = urlParams.get('character');
+        setCharacter(character);
+        adjustFontSize();
+    });
+</script>
 </body>
 </html>
