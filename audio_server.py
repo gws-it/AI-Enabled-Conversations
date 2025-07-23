@@ -7,6 +7,7 @@ import io
 import soundfile as sf
 import numpy as np
 import openai
+from openai import OpenAI
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -19,6 +20,7 @@ model = whisper.load_model("base")  # Options: tiny, base, small, medium, large
 print("Whisper model loaded successfully!")
 
 openai.api_key = os.getenv("OPENAI_API_KEY")
+client = OpenAI()
 
 @app.route('/chat', methods=['POST'])
 def chat_with_openai():
@@ -26,18 +28,21 @@ def chat_with_openai():
         data = request.get_json()
         messages = data.get('messages', [])
 
-        if not messages:
-            return jsonify({'error': 'No messages provided'}), 400
+        print("Sending to OpenAI:", messages)
 
-        response = openai.ChatCompletion.create(
-            model="gpt-4o",  # or gpt-3.5-turbo
+        response = client.chat.completions.create(
+            model="gpt-4o",
             messages=messages
         )
-        return jsonify({
-            'reply': response['choices'][0]['message']['content']
-        })
+
+        reply = response.choices[0].message.content
+        print("Reply:", reply)
+
+        return jsonify({'reply': reply})
 
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
 @app.route('/transcribe', methods=['POST'])

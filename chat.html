@@ -333,8 +333,13 @@
                 });
 
                 const data = await res.json();
-                const reply = data.choices?.[0]?.message?.content || "Oops, I'm having some trouble. Please try again later!";
-               
+                if (!res.ok) {
+                    throw new Error(`Server error: ${res.status} - ${data?.error || "Unknown error"}`);
+                }
+
+                console.log("Chat response:", data); // Debugging
+                const reply = data.reply || "Oops, I'm having some trouble. Please try again later!";
+             
                 await typeWriterWithSpeech(conversation, reply, 30);
 
                 conversationHistory.push({
