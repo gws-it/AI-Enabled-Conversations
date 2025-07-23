@@ -99,7 +99,7 @@
     </style>
 </head>
 <body>
-    <a class="back-button" href="home.html">←</a>
+    <a class="back-button" href="home.html" onclick="speechSynthesis.cancel();">←</a>
     <div class="image-panel"></div>
     <div class="chat-panel">
     <div class="right-panel">
@@ -113,6 +113,9 @@
             </div>
         </div>
     </div>
+    <button id="speak-button" class="mic-button" style="margin-top: 4vh; width: 100%;" onclick="speak(lastMessage)">
+        Speak Last Message
+    </button>
 </div>
 
 <script>
@@ -168,20 +171,11 @@
     let isProcessing = false;
     let currentUtterance = null;
     const BASE_BACKEND_URL = localStorage.getItem("whisper-backend-url");
-    let speechInitialized = false;
+    let currentCharacter = 'bsf';
+    let characterName = characters[currentCharacter].name;
+    let lastMessage = '';
+    const speakButton = document.getElementById("speak-button");
 
-    // Initialize speech synthesis for iOS
-    function initializeSpeech() {
-        if (!speechInitialized) {
-            // Create a dummy utterance to initialize speech synthesis
-            const dummyUtterance = new SpeechSynthesisUtterance("");
-            dummyUtterance.volume = 0;
-            speechSynthesis.speak(dummyUtterance);
-            speechInitialized = true;
-        }
-    }
-
-    // Initialize character
     function setCharacter(characterId) {
         if (!characters[characterId]) return;
         
@@ -196,19 +190,15 @@
                 content: characters[characterId].systemPrompt
             }
         ];
+
+        // speak(characters[currentCharacter].greeting);
+        lastMessage = characters[currentCharacter].greeting;
         
         conversation.innerHTML = `<strong>${characterName}:</strong> ${characters[characterId].greeting}`;
-        
-        // Initialize speech and speak greeting immediately
-        initializeSpeech();
-        setTimeout(() => {
-            speak(characters[characterId].greeting);
-        }, 100);
-        
         adjustFontSize();
     }
 
-    function typeWriterEffect(element, text, speed = 30) {
+    function typeWriterEffect(element, text, speed = 10) {
         return new Promise((resolve) => {
             let i = 0;
             const timer = setInterval(() => {
@@ -218,6 +208,7 @@
                     adjustFontSize();
                 } else {
                     clearInterval(timer);
+                    speakButton.disabled = false;
                     resolve();
                 }
             }, speed);
@@ -240,7 +231,6 @@
     addEventListener("keydown", async e => {
         if (e.code === "Space" && !e.repeat && !isProcessing) {
             e.preventDefault();
-            initializeSpeech(); // Initialize on user interaction
             if (!isRecording) {
                 await startRecording();
             } else {
@@ -249,9 +239,7 @@
         }
     });
 
-    // Add click handler for mic button
     micButton.addEventListener("click", async () => {
-        initializeSpeech(); // Initialize on user interaction
         if (!isProcessing) {
             if (!isRecording) {
                 await startRecording();
@@ -263,6 +251,7 @@
 
     async function startRecording() {
         try {
+            speakButton.disabled = true;
             if (currentUtterance) {
                 speechSynthesis.cancel();
             }
@@ -315,10 +304,9 @@
             } else {
                 const errorMsg = "Sorry, I couldn't quite catch that. Could you repeat what you said?";
                 conversation.innerHTML = `<strong>${characterName}:</strong>`;
-                
-                // Speak immediately, then do typewriter effect
-                speak(errorMsg);
-                await typeWriterEffect(conversation, errorMsg, 30);
+                // speak(errorMsg);
+                lastMessage = errorMsg;
+                await typeWriterEffect(conversation, errorMsg, 10);
                 
                 micButton.textContent = "Press here to start speaking";
             }
@@ -326,10 +314,9 @@
             console.error("Transcribe error:", err);
             const errorMsg = "Oops, I'm having some trouble. Please try again later!";
             conversation.innerHTML = `<strong>${characterName}:</strong>`;
-            
-            // Speak immediately, then do typewriter effect
-            speak(errorMsg);
-            await typeWriterEffect(conversation, errorMsg, 30);
+            // speak(errorMsg);
+            lastMessage = errorMsg;
+            await typeWriterEffect(conversation, errorMsg, 10);
             
             micButton.textContent = "Press here to start speaking";
         } finally {
@@ -343,7 +330,6 @@
         micButton.textContent = "...";
         isProcessing = true;
 
-        // Add user message
         conversationHistory.push({
             role: "user",
             content: question
@@ -368,11 +354,9 @@
             console.log("Chat response:", data);
             const reply = data.reply || "Oops, I'm having some trouble. Please try again later!";
          
-            // CRITICAL FIX: Speak immediately when we get the response
-            speak(reply);
-            
-            // Then do the typewriter effect
-            await typeWriterEffect(conversation, reply, 30);
+            // speak(reply);
+            lastMessage = reply;
+            await typeWriterEffect(conversation, reply, 10);
 
             conversationHistory.push({
                 role: "assistant",
@@ -386,36 +370,27 @@
             console.error("AI error:", err);
             const errorMsg = "Oops! Couldn't respond.";
             
-            // Speak immediately, then do typewriter effect
-            speak(errorMsg);
-            await typeWriterEffect(conversation, errorMsg, 30);
+            // speak(errorMsg);
+            lastMessage = errorMsg;
+            await typeWriterEffect(conversation, errorMsg, 10);
         } finally {
             isProcessing = false;
         }
     }
 
     function speak(text) {
-        // Cancel any existing speech
+        console.log("Speaking:", text);
         speechSynthesis.cancel();
         
-        // Small delay to ensure cancellation is processed
-        setTimeout(() => {
-            currentUtterance = new SpeechSynthesisUtterance(text);
-            
-            // Set voice settings based on current character
-            const settings = characters[currentCharacter].voiceSettings;
-            currentUtterance.rate = settings.rate;
-            currentUtterance.pitch = settings.pitch;
-            currentUtterance.volume = settings.volume;
-            currentUtterance.lang = settings.lang;
+        currentUtterance = new SpeechSynthesisUtterance(text);
+        
+        const settings = characters[currentCharacter].voiceSettings;
+        currentUtterance.rate = settings.rate;
+        currentUtterance.pitch = settings.pitch;
+        currentUtterance.volume = settings.volume;
+        currentUtterance.lang = settings.lang;
 
-            // Add error handling
-            currentUtterance.onerror = (event) => {
-                console.error('Speech synthesis error:', event);
-            };
-
-            speechSynthesis.speak(currentUtterance);
-        }, 50);
+        speechSynthesis.speak(currentUtterance);
     }
 
     window.addEventListener('load', () => {
