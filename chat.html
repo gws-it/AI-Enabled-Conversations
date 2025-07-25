@@ -307,7 +307,8 @@
     let isProcessing = false;
     let currentUtterance = null;
     let isPaused = false;
-    const BASE_BACKEND_URL = localStorage.getItem("whisper-backend-url") || "http://localhost:5000";
+    // const BASE_BACKEND_URL = localStorage.getItem("whisper-backend-url") || "http://localhost:5000";
+    const BASE_BACKEND_URL = "http://localhost:5000";
     let currentCharacter = 'bsf';
     let characterName = characters[currentCharacter]?.name;
     let lastMessage = '';
