@@ -17,6 +17,8 @@ from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives import serialization
 import datetime
 
+# visit https://192.168.0.129:5000/health to access this server
+
 load_dotenv()
 
 app = Flask(__name__)
@@ -176,10 +178,7 @@ if __name__ == '__main__':
             import ipaddress
             generate_self_signed_cert()
         except ImportError:
-            print("Error: cryptography library is required for SSL certificate generation.")
-            print("Please install it with: pip install cryptography")
-            print("Or use ngrok instead for HTTPS access.")
-            # Fall back to HTTP
+            print('Module not found, install required packages')
             app.run(host='0.0.0.0', port=5000)
             exit()
     
@@ -187,14 +186,12 @@ if __name__ == '__main__':
     context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
     context.load_cert_chain('cert.pem', 'key.pem')
     
-    print("Starting HTTPS server on https://0.0.0.0:5000")
-    print("You can access it from your phone using your laptop's IP address")
     
     # Get and display local IP
     import socket
     hostname = socket.gethostname()
     local_ip = socket.gethostbyname(hostname)
     print(f"Local IP: https://{local_ip}:5000")
-    print("Note: You may need to accept the self-signed certificate warning in your browser")
-    
+    print(f"Accept self-signed certificate at https://{local_ip}:5000/health")
+
     app.run(host='0.0.0.0', port=5000, ssl_context=context)
