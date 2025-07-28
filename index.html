@@ -89,14 +89,18 @@
             margin-bottom: 0.8rem;
         }
 
-        .back-button {
+        .settings-button {
             position: absolute;
             top: 2vh;
-            left: 2vw;
+            right: 2vw;
             font-size: 4vh;
-            cursor: pointer;
             text-decoration: none;
-            color: inherit;
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s;
         }
         
         @media (max-width: 768px) {
@@ -116,7 +120,7 @@
     </header>
     
     <main>
-        <a class="back-button"s href="index.html">←</a>
+        <a class="settings-button"s href="settings.html">⚙️</a>
 
         <div class="widget-container">
 

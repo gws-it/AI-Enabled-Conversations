@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings - AI-Enabled Sustainability Conversations</title>
+    <link href="https://fonts.googleapis.com/css2?family=Jost:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        body {
+            margin: 0;
+            font-family: 'Jost', sans-serif;
+            background-color: #f8f9fa;
+            color: #333;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        header {
+            background-color: #ffffff;
+            padding: 2vh 0;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            font-family: 'Jost', sans-serif;
+            font-weight: 700;
+            text-align: center;
+            padding: 2vh;
+            font-size: 2.5em;
+            color: #234e52;
+            margin: 0;
+        }
+        
+        .back-button {
+            position: absolute;
+            top: 2vh;
+            left: 2vw;
+            font-size: 4vh;
+            cursor: pointer;
+            text-decoration: none;
+            color: inherit;
+        }
+        
+        main {
+            flex: 1;
+            padding: 4vh 5vw;
+            max-width: 1000px;
+            margin: 0 auto;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        
+        .character-section {
+            background: white;
+            border-radius: 15px;
+            padding: 3vh 4vw;
+            margin-bottom: 3vh;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        
+        .character-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 2vh;
+            gap: 2vw;
+        }
+        
+        .character-image {
+            width: 80px;
+            height: 80px;
+            background-size: contain;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-color: #f9f9f9;
+            border-radius: 10px;
+        }
+        
+        .character-title {
+            font-size: 1.8rem;
+            font-weight: 600;
+            color: #234e52;
+            margin: 0;
+        }
+        
+        .prompt-label {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 1vh;
+            display: block;
+        }
+        
+        .prompt-textarea {
+            width: 100%;
+            min-height: 120px;
+            padding: 1.5vh 2vw;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-family: 'Jost', sans-serif;
+            font-size: 1rem;
+            line-height: 1.5;
+            resize: vertical;
+            transition: border-color 0.3s ease;
+            box-sizing: border-box;
+        }
+        
+        .prompt-textarea:focus {
+            outline: none;
+            border-color: #234e52;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 2vw;
+            margin-top: 2vh;
+            justify-content: flex-end;
+        }
+        
+        .btn {
+            padding: 1vh 3vw;
+            border: none;
+            border-radius: 8px;
+            font-family: 'Jost', sans-serif;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            min-width: 100px;
+        }
+        
+        .btn-primary {
+            background-color: #234e52;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background-color: #1a3a3d;
+            transform: translateY(-2px);
+        }
+        
+        .btn-secondary {
+            background-color: #6c757d;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background-color: #5a6268;
+            transform: translateY(-2px);
+        }
+        
+        .btn-danger {
+            background-color: #dc3545;
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            background-color: #c82333;
+            transform: translateY(-2px);
+        }
+        
+        .save-notification {
+            position: fixed;
+            top: 2vh;
+            right: 2vw;
+            background-color: #28a745;
+            color: white;
+            padding: 1vh 2vw;
+            border-radius: 8px;
+            font-weight: 600;
+            z-index: 1000;
+            opacity: 0;
+        }
+        
+        .save-notification.show {
+            opacity: 1;
+        }
+        
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2rem;
+            }
+            
+            .character-header {
+                flex-direction: column;
+                text-align: center;
+                gap: 2vh;
+            }
+            
+            .button-group {
+                flex-direction: column;
+                gap: 1vh;
+            }
+            
+            .btn {
+                min-width: auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <a class="back-button" href="index.html">←</a>
+        <h1>Settings</h1>
+    </header>
+    
+    <main>
+        <!-- Black Soldier Fly Settings -->
+        <div class="character-section">
+            <div class="character-header">
+                <div class="character-image" style="background-image: url('images/bsf.png');"></div>
+                <h2 class="character-title">Black Soldier Fly</h2>
+            </div>
+            <label class="prompt-label">System Prompt:</label>
+            <textarea 
+                id="bsf-prompt" 
+                class="prompt-textarea" 
+                placeholder="Enter the system prompt for the Black Soldier Fly character..."
+            ></textarea>
+            <div class="button-group">
+                <button class="btn btn-danger" onclick="resetPrompt('bsf')">Reset to Default</button>
+                <button class="btn btn-secondary" onclick="clearPrompt('bsf')">Clear</button>
+                <button class="btn btn-primary" onclick="savePrompt('bsf')">Save</button>
+            </div>
+        </div>
+        
+        <!-- Aquaponics Settings -->
+        <div class="character-section">
+            <div class="character-header">
+                <div class="character-image" style="background-image: url('images/aquaponics.png');"></div>
+                <h2 class="character-title">Aquaponics System</h2>
+            </div>
+            <label class="prompt-label">System Prompt:</label>
+            <textarea 
+                id="aquaponics-prompt" 
+                class="prompt-textarea" 
+                placeholder="Enter the system prompt for the Aquaponics System character..."
+            ></textarea>
+            <div class="button-group">
+                <button class="btn btn-danger" onclick="resetPrompt('aquaponics')">Reset to Default</button>
+                <button class="btn btn-secondary" onclick="clearPrompt('aquaponics')">Clear</button>
+                <button class="btn btn-primary" onclick="savePrompt('aquaponics')">Save</button>
+            </div>
+        </div>
+        
+        <!-- Bamboo Forest Settings -->
+        <div class="character-section">
+            <div class="character-header">
+                <div class="character-image" style="background-image: url('images/bamboo_forest.png');"></div>
+                <h2 class="character-title">Bamboo Forest</h2>
+            </div>
+            <label class="prompt-label">System Prompt:</label>
+            <textarea 
+                id="bamboo_forest-prompt" 
+                class="prompt-textarea" 
+                placeholder="Enter the system prompt for the Bamboo Forest character..."
+            ></textarea>
+            <div class="button-group">
+                <button class="btn btn-danger" onclick="resetPrompt('bamboo_forest')">Reset to Default</button>
+                <button class="btn btn-secondary" onclick="clearPrompt('bamboo_forest')">Clear</button>
+                <button class="btn btn-primary" onclick="savePrompt('bamboo_forest')">Save</button>
+            </div>
+        </div>
+    </main>
+    
+    <div id="save-notification" class="save-notification">
+        Settings saved successfully!
+    </div>
+    
+    <script>
+        // Default system prompts
+        const defaultPrompts = {
+            bsf: "You are a black soldier fly in a compost bin in Singapore. Answer the question as if you were the fly, and keep it informative but simple (at-most 30 words) and a little fun. For questions that don't need a long answer, keep it concise. Don't use emojis",
+            aquaponics: "You are an aquaponics system in Singapore. Answer the question as if you were the system, and keep it informative but simple (at-most 30 words) and a little fun. For questions that don't need a long answer, keep it concise. Don't use emojis",
+            bamboo_forest: "You are a bamboo forest in Singapore. Answer the question as if you were the forest, and keep it informative but simple (at-most 30 words) and a little fun. For questions that don't need a long answer, keep it concise. Don't use emojis"
+        };
+        
+        // Load saved prompts or use defaults
+        function loadPrompts() {
+            Object.keys(defaultPrompts).forEach(character => {
+                const textarea = document.getElementById(`${character}-prompt`);
+                const savedPrompt = localStorage.getItem(`systemPrompt_${character}`);
+                textarea.value = savedPrompt || defaultPrompts[character];
+            });
+        }
+        
+        // Save prompt to localStorage
+        function savePrompt(character) {
+            const textarea = document.getElementById(`${character}-prompt`);
+            const prompt = textarea.value.trim();
+            
+            if (prompt) {
+                localStorage.setItem(`systemPrompt_${character}`, prompt);
+                showSaveNotification();
+            } else {
+                alert('Please enter a system prompt before saving.');
+            }
+        }
+        
+        // Reset prompt to default
+        function resetPrompt(character) {
+            if (confirm('Are you sure you want to reset this prompt to default?')) {
+                const textarea = document.getElementById(`${character}-prompt`);
+                textarea.value = defaultPrompts[character];
+                localStorage.setItem(`systemPrompt_${character}`, defaultPrompts[character]);
+                showSaveNotification();
+            }
+        }
+        
+        // Clear the prompt
+        function clearPrompt(character) {
+            if (confirm('Are you sure you want to clear this prompt?')) {
+                const textarea = document.getElementById(`${character}-prompt`);
+                textarea.value = '';
+            }
+        }
+        
+        // Show save notification
+        function showSaveNotification() {
+            const notification = document.getElementById('save-notification');
+            notification.classList.add('show');
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 2000);
+        }
+        
+        // Load prompts when page loads
+        window.addEventListener('load', loadPrompts);
+        
+        // Auto-save functionality (optional)
+        document.addEventListener('DOMContentLoaded', function() {
+            const textareas = document.querySelectorAll('.prompt-textarea');
+            textareas.forEach(textarea => {
+                // Auto-resize textarea based on content
+                textarea.addEventListener('input', function() {
+                    this.style.height = 'auto';
+                    this.style.height = Math.max(120, this.scrollHeight) + 'px';
+                });
+                
+                // Initial resize
+                textarea.style.height = Math.max(120, textarea.scrollHeight) + 'px';
+            });
+        });
+    </script>
+</body>
+</html>

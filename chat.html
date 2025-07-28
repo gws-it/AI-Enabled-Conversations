@@ -320,10 +320,13 @@
         
         imagePanel.style.backgroundImage = `url('${characters[characterId].image}')`;
         
+        const customPrompt = localStorage.getItem(`systemPrompt_${characterId}`);
+        const systemPrompt = customPrompt || characters[characterId].systemPrompt;
+        
         conversationHistory = [
             {
                 role: "system",
-                content: characters[characterId].systemPrompt
+                content: systemPrompt
             }
         ];
 
