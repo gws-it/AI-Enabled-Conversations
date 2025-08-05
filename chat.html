@@ -337,28 +337,34 @@
         speak(lastMessage);
     }
 
-    // Event Listeners
-    addEventListener("keydown", async e => {
-        if (e.code === "Space" && !e.repeat && !isProcessing) {
-            e.preventDefault();
-            if (!isRecording) {
-                await startRecording();
-            } else {
-                await stopRecording();
-            }
+    // For desktop (mouse) users
+    micButton.addEventListener("mousedown", async () => {
+        if (!isProcessing && !isRecording) {
+            await startRecording();
         }
     });
 
-    micButton.addEventListener("click", async () => {
-        if (!isProcessing) {
-            if (!isRecording) {
-                await startRecording();
-            } else {
-                await stopRecording();
-            }
+    micButton.addEventListener("mouseup", async () => {
+        if (isRecording) {
+            await stopRecording();
         }
     });
-    
+
+    // For mobile (touch) users
+    micButton.addEventListener("touchstart", async (e) => {
+        e.preventDefault(); // prevent double trigger
+        if (!isProcessing && !isRecording) {
+            await startRecording();
+        }
+    });
+
+    micButton.addEventListener("touchend", async (e) => {
+        e.preventDefault();
+        if (isRecording) {
+            await stopRecording();
+        }
+    });
+
     transcriptButton.addEventListener("click", toggleTranscript);
     closeTranscript.addEventListener("click", closeTranscriptPanel);
 
