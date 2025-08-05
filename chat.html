@@ -265,7 +265,8 @@
     const characters = {
         bsf: {
             name: "Black Soldier Fly",
-            image: "images/bsf.png",
+            imageIdle: "images/bsf.png",
+            imageTalking: "images/bsf2.png",
             greeting: "Hi! I'm a black soldier fly living in a compost bin in Singapore. Ask me anything about sustainability, composting, or my daily life.",
             systemPrompt: "You are a black soldier fly in a compost bin in Singapore. Answer the question as if you were the fly, and keep it informative but simple (at-most 30 words) and a little fun. For questions that don't need a long answer, keep it concise. Don't use emojis",
             voiceSettings: {
@@ -277,7 +278,8 @@
         },
         aquaponics: {
             name: "Aquaponics",
-            image: "images/aquaponics.png",
+            imageIdle: "images/aquaponics.png",
+            imageTalking: "images/aquaponics2.png",
             greeting: "Hi! I'm an aquaponics system in Singapore. Ask me anything about sustainability, aquaponics, or how I work.",
             systemPrompt: "You are an aquaponics system in Singapore. Answer the question as if you were the system, and keep it informative but simple (at-most 30 words) and a little fun. For questions that don't need a long answer, keep it concise. Don't use emojis",
             voiceSettings: {
@@ -289,7 +291,8 @@
         },
         bamboo_forest: {
             name: "Bamboo Forest",
-            image: "images/bamboo_forest.png",
+            imageIdle: "images/bamboo_forest.png",
+            imageTalking: "images/bamboo_forest2.png",
             greeting: "Hi! I'm a bamboo forest. Ask me anything about sustainability, bamboo, or what I'm used for.",
             systemPrompt: "You are a bamboo forest in Singapore. Answer the question as if you were the forest, and keep it informative but simple (at-most 30 words) and a little fun. For questions that don't need a long answer, keep it concise. Don't use emojis",
             voiceSettings: {
@@ -321,8 +324,8 @@
         currentCharacter = characterId;
         characterName = characters[characterId].name;
         
-        imagePanel.style.backgroundImage = `url('${characters[characterId].image}')`;
-        
+        imagePanel.style.backgroundImage = `url('${characters[characterId].imageIdle}')`;
+
         const customPrompt = localStorage.getItem(`systemPrompt_${characterId}`);
         const systemPrompt = customPrompt || characters[characterId].systemPrompt;
         
@@ -692,31 +695,76 @@
             speakButton.disabled = false;
             pauseButton.disabled = false;
         }
-}
+    }
 
+    // Helper function to get a random integer between min and max (inclusive)
+    function randomInt(min, max) {
+        return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+
+    // Control flag for animation
+    let speaking = false;
+
+    // Function to start talking animation
+    function startTalkingAnimation(character) {
+        speaking = true;
+
+        function toggle() {
+            if (!speaking) return;
+
+            const currentBackground = imagePanel.style.backgroundImage;
+            imagePanel.style.backgroundImage = currentBackground.includes(character.imageIdle)
+                ? `url('${character.imageTalking}')`
+                : `url('${character.imageIdle}')`;
+
+            setTimeout(toggle, randomInt(50, 400)); // Next toggle after random interval
+        }
+
+        toggle();
+    }
+
+    // Function to stop talking animation
+    function stopTalkingAnimation(character) {
+        speaking = false;
+        if (character.imageIdle) {
+            imagePanel.style.backgroundImage = `url('${character.imageIdle}')`;
+        }
+    }
+
+    // Main speak function
     function speak(text) {
         console.log("Speaking:", text);
         speechSynthesis.cancel();
         isPaused = false;
         pauseButton.innerHTML = '<i class="fas fa-pause"></i>';
         clearStatus();
-        
+
         currentUtterance = new SpeechSynthesisUtterance(text);
-        
+
         const settings = characters[currentCharacter].voiceSettings;
         currentUtterance.rate = settings.rate;
         currentUtterance.pitch = settings.pitch;
         currentUtterance.volume = settings.volume;
         currentUtterance.lang = settings.lang;
-        
+
         currentUtterance.onstart = () => {
             pauseButton.disabled = false;
+
+            // Start randomized talking animation
+            const character = characters[currentCharacter];
+            if (character.imageTalking) {
+                startTalkingAnimation(character);
+            }
         };
-        
+
         currentUtterance.onend = () => {
             pauseButton.disabled = true;
             isPaused = false;
             pauseButton.innerHTML = '<i class="fas fa-pause"></i>';
+
+            // Stop animation and reset image
+            const character = characters[currentCharacter];
+            stopTalkingAnimation(character);
         };
 
         speechSynthesis.speak(currentUtterance);
@@ -724,17 +772,28 @@
 
     function togglePause() {
         if (!currentUtterance) return;
-        
+
+        const character = characters[currentCharacter];
+
         if (isPaused) {
             // Resume speech
             speechSynthesis.resume();
             isPaused = false;
             pauseButton.innerHTML = '<i class="fas fa-pause"></i>';
+
+            // Resume talking animation
+            if (character.imageTalking && !speaking) {
+                startTalkingAnimation(character);
+            }
+
         } else {
             // Pause speech
             speechSynthesis.pause();
             isPaused = true;
             pauseButton.innerHTML = '<i class="fas fa-play"></i>';
+
+            // Pause talking animation
+            stopTalkingAnimation(character);
         }
     }
 
