@@ -102,6 +102,20 @@
             cursor: pointer;
             transition: all 0.3s;
         }
+
+        .connect-button {
+            padding: 1vh 2vw;
+            background-color: #234e52;
+            color: white;
+            text-decoration: none;
+            border-radius: 30px;
+            font-size: 1vw;
+            width: fit-content;
+            position: absolute;
+            top: 2vh;
+            left: 2vw;
+
+        }
         
         @media (max-width: 768px) {
             .widget-container {
@@ -120,7 +134,8 @@
     </header>
     
     <main>
-        <a class="settings-button"s href="settings.html">⚙️</a>
+        <a class="connect-button" href="https://192.168.50.171:5000/health" target="_blank" rel="noopener">Connect</a> <!-- Update with your actual IP address -->
+        <a class="settings-button" href="settings.html">⚙️</a>
 
         <div class="widget-container">
 

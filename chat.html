@@ -307,7 +307,10 @@
     let isProcessing = false;
     let currentUtterance = null;
     let isPaused = false;
-    const BASE_BACKEND_URL = "https://192.168.50.154:5000"; // Update with location change
+    const BASE_BACKEND_URL = "https://192.168.50.171:5000"; // Update with location change
+    // 1. ipconfig in terminal
+    // 2. Find the IPv4 address
+    // 3. Replace the BASE_BACKEND_URL with https://<your-ip>:5000
     let currentCharacter = 'bsf';
     let characterName = characters[currentCharacter]?.name;
     let lastMessage = '';

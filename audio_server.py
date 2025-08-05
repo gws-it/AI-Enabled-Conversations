@@ -17,8 +17,6 @@ from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives import serialization
 import datetime
 
-# visit https://192.168.0.129:5000/health to access this server
-
 load_dotenv()
 
 app = Flask(__name__)
