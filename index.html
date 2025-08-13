@@ -116,6 +116,64 @@
             left: 2vw;
 
         }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+
+        .modal-content {
+            background-color: white;
+            margin: 15% auto;
+            padding: 20px;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 400px;
+            text-align: center;
+        }
+
+        .modal-content h2 {
+            color: #234e52;
+            margin-top: 0;
+        }
+
+        .modal-content input {
+            width: 80%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+
+        .modal-buttons {
+            margin-top: 20px;
+        }
+
+        .modal-buttons button {
+            padding: 10px 20px;
+            margin: 0 10px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        .modal-buttons button:first-child {
+            background-color: #234e52;
+            color: white;
+        }
+
+        .modal-buttons button:last-child {
+            background-color: #ddd;
+            color: black;
+        }
         
         @media (max-width: 768px) {
             .widget-container {
@@ -134,7 +192,7 @@
     </header>
     
     <main>
-        <a class="connect-button" href="https://192.168.50.153:5000/health" target="_blank" rel="noopener">Connect</a>
+        <a class="connect-button" href="#" onclick="showIPModal()">Connect</a>
         <a class="settings-button" href="settings.html">⚙️</a>
 
         <div class="widget-container">
@@ -163,6 +221,18 @@
                 </div>
             </div>
         </div>
+
+        <div id="ip-modal" class="modal">
+            <div class="modal-content">
+                <h2>Enter Backend Server IP</h2>
+                <p>Enter your computer's IP address (find it using ipconfig on Windows or ifconfig on Mac/Linux):</p>
+                <input type="text" id="ip-input" value="192.168.50.153">
+                <div class="modal-buttons">
+                    <button onclick="connectToBackend()">Connect</button>
+                    <button onclick="closeIPModal()">Cancel</button>
+                </div>
+            </div>
+        </div>
     </main>
     
     <script>
@@ -175,6 +245,44 @@
                 }
             }
         });
+
+        function showIPModal() {
+            // Pre-fill with saved IP if exists
+            const savedIP = localStorage.getItem('backendIP');
+            if (savedIP) {
+                document.getElementById('ip-input').value = savedIP;
+            }
+            document.getElementById('ip-modal').style.display = 'block';
+        }
+
+        function closeIPModal() {
+            document.getElementById('ip-modal').style.display = 'none';
+        }
+
+        function connectToBackend() {
+            const ipInput = document.getElementById('ip-input').value.trim();
+            if (!ipInput) {
+                alert('Please enter an IP address');
+                return;
+            }
+            
+            // Save the IP to localStorage
+            localStorage.setItem('backendIP', ipInput);
+            
+            // Test connection
+            const testURL = `https://${ipInput}:5000/health`;
+            window.open(testURL, '_blank');
+            
+            closeIPModal();
+        }
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('ip-modal');
+            if (event.target == modal) {
+                closeIPModal();
+            }
+        }
     </script>
 </body>
 </html>

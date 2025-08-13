@@ -279,7 +279,7 @@
         aquaponics: {
             name: "Aquaponics",
             imageIdle: "images/aquaponics.png",
-            imageTalking: "images/aquaponics2.png",
+            imageTalking: "images/aquaponics.png",
             greeting: "Hi! I'm an aquaponics system in Singapore. Ask me anything about sustainability, aquaponics, or how I work.",
             systemPrompt: "You are an aquaponics system in Singapore. Answer the question as if you were the system, and keep it informative but simple (at-most 30 words) and a little fun. For questions that don't need a long answer, keep it concise. Don't use emojis",
             voiceSettings: {
@@ -292,7 +292,7 @@
         bamboo_forest: {
             name: "Bamboo Forest",
             imageIdle: "images/bamboo_forest.png",
-            imageTalking: "images/bamboo_forest2.png",
+            imageTalking: "images/bamboo_forest.png",
             greeting: "Hi! I'm a bamboo forest. Ask me anything about sustainability, bamboo, or what I'm used for.",
             systemPrompt: "You are a bamboo forest in Singapore. Answer the question as if you were the forest, and keep it informative but simple (at-most 30 words) and a little fun. For questions that don't need a long answer, keep it concise. Don't use emojis",
             voiceSettings: {
@@ -310,13 +310,25 @@
     let isProcessing = false;
     let currentUtterance = null;
     let isPaused = false;
-    const BASE_BACKEND_URL = "https://192.168.50.153:5000"; // Update with location change
+    let BASE_BACKEND_URL = "";
     // 1. ipconfig in terminal
     // 2. Find the IPv4 address
     // 3. Replace the BASE_BACKEND_URL with https://<your-ip>:5000
     let currentCharacter = 'bsf';
     let characterName = characters[currentCharacter]?.name;
     let lastMessage = '';
+
+    function initializeBackendURL() {
+        const savedIP = localStorage.getItem('backendIP');
+        if (savedIP) {
+            BASE_BACKEND_URL = `https://${savedIP}:5000`;
+            console.log("Backend URL set to:", BASE_BACKEND_URL);
+        } else {
+            // Redirect back to index if no IP is saved
+            alert('Please set the backend IP address first');
+            window.location.href = 'index.html';
+        }
+    }
 
     function setCharacter(characterId) {
         if (!characters[characterId]) characterId = 'bsf';
@@ -798,6 +810,8 @@
     }
 
     window.addEventListener('load', () => {
+        initializeBackendURL();
+        
         const urlParams = new URLSearchParams(window.location.search);
         const character = urlParams.get('character');
         setCharacter(character || 'bsf');
