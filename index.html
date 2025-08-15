@@ -255,10 +255,6 @@
             document.getElementById('ip-modal').style.display = 'block';
         }
 
-        function closeIPModal() {
-            document.getElementById('ip-modal').style.display = 'none';
-        }
-
         function connectToBackend() {
             const ipInput = document.getElementById('ip-input').value.trim();
             if (!ipInput) {
@@ -271,9 +267,9 @@
             
             // Test connection
             const testURL = `https://${ipInput}:5000/health`;
-            window.open(testURL, '_blank');
+            window.open(testURL, '_blank'); // open in new tab
             
-            closeIPModal();
+            document.getElementById('ip-modal').style.display = 'none'; // close ip input 
         }
 
         // Close modal when clicking outside

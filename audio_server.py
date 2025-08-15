@@ -16,6 +16,7 @@ from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives import serialization
 import datetime
+import socket
 
 load_dotenv()
 
@@ -23,14 +24,14 @@ app = Flask(__name__)
 CORS(app)  # Enable CORS for all routes
 
 print("\nLoading Whisper model...\n")
-model = whisper.load_model("base")  # Options: tiny, base, small, medium, large
+whisper_model = whisper.load_model("base")  # Options: tiny, base, small, medium, large
 print("Whisper model loaded successfully!")
 
 openai.api_key = os.getenv("OPENAI_API_KEY")
 client = OpenAI()
 
 @app.route('/chat', methods=['POST'])
-def chat_with_openai():
+def chat_to_AI():
     try:
         data = request.get_json()
         messages = data.get('messages', [])
@@ -61,8 +62,8 @@ def transcribe_audio():
             return jsonify({'error': 'No audio file provided'}), 400
         
         audio_file = request.files['audio']
-        
-        # Create a temporary file
+
+        # Create a temporary file - Whisper needs a file path to work with
         tmpfile_fd, tmpfile_path = tempfile.mkstemp(suffix=".wav")
         
         try:
@@ -71,7 +72,7 @@ def transcribe_audio():
                 audio_file.save(tmp)
             
             # Transcribe the audio
-            result = model.transcribe(tmpfile_path)
+            result = whisper_model.transcribe(tmpfile_path)
             transcript = result['text'].strip()
             
             print(f"Transcribed: {transcript}")
@@ -118,7 +119,6 @@ def generate_self_signed_cert():
     )
     
     # Get your local IP address
-    import socket
     hostname = socket.gethostname()
     local_ip = socket.gethostbyname(hostname)
     
@@ -184,9 +184,6 @@ if __name__ == '__main__':
     context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
     context.load_cert_chain('cert.pem', 'key.pem')
     
-    
-    # Get and display local IP
-    import socket
     hostname = socket.gethostname()
     local_ip = socket.gethostbyname(hostname)
     print(f"Local IP: https://{local_ip}:5000")

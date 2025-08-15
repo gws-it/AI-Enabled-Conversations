@@ -310,19 +310,16 @@
     let isProcessing = false;
     let currentUtterance = null;
     let isPaused = false;
-    let BASE_BACKEND_URL = "";
-    // 1. ipconfig in terminal
-    // 2. Find the IPv4 address
-    // 3. Replace the BASE_BACKEND_URL with https://<your-ip>:5000
-    let currentCharacter = 'bsf';
+    let backendURL = "";
+    let currentCharacter = 'bsf'; //default character
     let characterName = characters[currentCharacter]?.name;
     let lastMessage = '';
 
     function initializeBackendURL() {
-        const savedIP = localStorage.getItem('backendIP');
-        if (savedIP) {
-            BASE_BACKEND_URL = `https://${savedIP}:5000`;
-            console.log("Backend URL set to:", BASE_BACKEND_URL);
+        const backendIP = localStorage.getItem('backendIP');
+        if (backendIP) {
+            backendURL = `https://${backendIP}:5000`;
+            console.log("Backend URL set to:", backendURL);
         } else {
             // Redirect back to index if no IP is saved
             alert('Please set the backend IP address first');
@@ -427,7 +424,7 @@
         }
 
         try {
-            const res = await fetch(`${BASE_BACKEND_URL}/chat`, {
+            const res = await fetch(`${backendURL}/chat`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json"
@@ -656,7 +653,7 @@
             const formData = new FormData();
             formData.append('audio', audioBlob, 'audio.wav');
 
-            const res = await fetch(`${BASE_BACKEND_URL}/transcribe`, {
+            const res = await fetch(`${backendURL}/transcribe`, {
                 method: 'POST',
                 body: formData
             });
